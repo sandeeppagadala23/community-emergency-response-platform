@@ -28,7 +28,7 @@ class EmergencyContact(models.Model):
         choices=SERVICE_CHOICES
     )
 
-    phone_number = models.CharField(max_length=15)
+    phone_number = models.CharField(max_length=20)
 
     email = models.EmailField(blank=True)
 
@@ -59,7 +59,7 @@ class GuardianContact(models.Model):
 
     relationship = models.CharField(max_length=50)
 
-    phone_number = models.CharField(max_length=15)
+    phone_number = models.CharField(max_length=20)
 
     email = models.EmailField(blank=True)
 
@@ -88,15 +88,21 @@ class GuardianContact(models.Model):
 
 
 class ContactVerificationOTP(models.Model):
+
     contact = models.ForeignKey(
         GuardianContact,
         on_delete=models.CASCADE,
         related_name='verification_otps',
     )
+
     code_hash = models.CharField(max_length=128)
+
     expires_at = models.DateTimeField()
+
     attempts = models.PositiveSmallIntegerField(default=0)
+
     is_used = models.BooleanField(default=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
