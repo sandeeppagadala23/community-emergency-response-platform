@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guardian Dashboard - Community Emergency Response System</title>
+
+    <style>
+        :root {
+            --navy: #183153;
+            --teal: #168C86;
+            --teal-dark: #117670;
+            --white: #ffffff;
+            --grey-bg: #f1f4f7;
+            --grey-border: #d9e0e7;
+            --grey-text: #5b6b7c;
+            --text: #1f2d3d;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: var(--grey-bg);
+            color: var(--text);
+            line-height: 1.5;
+        }
+
+        .topbar {
+            background: var(--navy);
+            color: var(--white);
+            padding: 18px 24px;
+        }
+
+        .topbar-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .topbar h1 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        .topbar p {
+            margin: 2px 0 0;
+            opacity: 0.85;
+        }
+
+        .page {
+            max-width: 1100px;
+            margin: 24px auto;
+            padding: 0 16px;
+        }
+
+        .card {
+            background: var(--white);
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(24, 49, 83, 0.08);
+            padding: 22px;
+            margin-bottom: 22px;
+        }
+
+        .card h2 {
+            margin: 0 0 14px;
+            color: var(--navy);
+            font-size: 1.25rem;
+        }
+
+        .card-header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .card-header h2 {
+            margin: 0;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 14px;
+        }
+
+        .item {
+            border: 1px solid var(--grey-border);
+            border-left: 5px solid var(--teal);
+            border-radius: 10px;
+            padding: 16px;
+            background: var(--white);
+            overflow-wrap: anywhere;
+        }
+
+        .item.alert-item {
+            border-left-color: var(--navy);
+        }
+
+        .item.is-read {
+            opacity: 0.7;
+            border-left-color: var(--grey-border);
+        }
+
+        .item h3 {
+            margin: 0 0 8px;
+            color: var(--navy);
+            font-size: 1.05rem;
+        }
+
+        .item p {
+            margin: 6px 0;
+            font-size: 0.95rem;
+        }
+
+        .label {
+            color: var(--grey-text);
+            font-size: 0.85rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            background: var(--grey-bg);
+            color: var(--navy);
+        }
+
+        .badge.teal {
+            background: var(--teal);
+            color: var(--white);
+        }
+
+        .badge.navy {
+            background: var(--navy);
+            color: var(--white);
+        }
+
+        .profile-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 14px;
+        }
+
+        .profile-grid div {
+            background: var(--grey-bg);
+            border-radius: 8px;
+            padding: 12px 14px;
+            overflow-wrap: anywhere;
+        }
+
+        .profile-grid strong {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--grey-text);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .empty {
+            background: var(--grey-bg);
+            border: 1px dashed var(--grey-border);
+            border-radius: 10px;
+            padding: 18px;
+            color: var(--grey-text);
+        }
+
+        .note {
+            background: #e6f4f3;
+            border-left: 4px solid var(--teal);
+            border-radius: 6px;
+            padding: 12px 14px;
+            font-size: 0.95rem;
+        }
+
+        .message {
+            background: #e6f4f3;
+            color: var(--navy);
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 14px;
+        }
+
+        .mark-read-button {
+            margin-top: 10px;
+            background: var(--teal);
+            color: var(--white);
+            border: none;
+            border-radius: 6px;
+            padding: 9px 16px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            cursor: pointer;
+            min-height: 40px;
+        }
+
+        .mark-read-button:hover {
+            background: var(--teal-dark);
+        }
+
+        .mark-read-button:disabled {
+            background: var(--grey-border);
+            color: var(--grey-text);
+            cursor: default;
+        }
+
+        .action-error {
+            color: #9b1c1c;
+            font-size: 0.9rem;
+            margin: 8px 0 0;
+        }
+
+        .logout-button {
+            background: var(--white);
+            color: var(--navy);
+            border: none;
+            border-radius: 6px;
+            padding: 10px 18px;
+            font-weight: bold;
+            cursor: pointer;
+            min-height: 40px;
+        }
+
+        .logout-button:hover {
+            background: var(--grey-border);
+        }
+
+        @media (max-width: 600px) {
+            .page {
+                padding: 0 10px;
+            }
+
+            .card {
+                padding: 16px;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .mark-read-button,
+            .logout-button {
+                width: 100%;
+            }
+
+            .topbar-inner {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header class="topbar">
+        <div class="topbar-inner">
+            <div>
+                <h1>Guardian Dashboard</h1>
+                <p>Welcome, {{ request.user.username }}</p>
+            </div>
+            <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="logout-button">Logout</button>
+            </form>
+        </div>
+    </header>
+
+    <main class="page">
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="message">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- Guardian profile -->
+        <section class="card" aria-labelledby="profile-heading">
+            <h2 id="profile-heading">Your Profile</h2>
+
+            <div class="profile-grid">
+                <div>
+                    <strong>Username</strong>
+                    {{ request.user.username }}
+                </div>
+                <div>
+                    <strong>Email</strong>
+                    {{ request.user.email|default:"Not provided" }}
+                </div>
+                <div>
+                    <strong>Phone</strong>
+                    {% if profile %}{{ profile.phone_number }}{% else %}Not provided{% endif %}
+                </div>
+                <div>
+                    <strong>Verification</strong>
+                    {% if profile and profile.is_verified %}
+                        <span class="badge teal">Verified</span>
+                    {% else %}
+                        <span class="badge">Pending verification</span>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+
+        <!-- Linked residents -->
+        <section class="card" aria-labelledby="residents-heading">
+            <div class="card-header">
+                <h2 id="residents-heading">Linked Residents</h2>
+            </div>
+
+            {% if linked_links %}
+                <div class="grid">
+                    {% for link in linked_links %}
+                        <article class="item">
+                            <h3>{{ link.resident.username }}</h3>
+                            <p>
+                                <span class="label">Your relationship:</span>
+                                {{ link.relationship }}
+                            </p>
+                            <p>
+                                <span class="label">Guardian type:</span>
+                                {{ link.get_guardian_type_display }}
+                            </p>
+                            <p><span class="badge teal">Verified</span></p>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty">
+                    No verified residents are linked to your account yet.
+                    If you are a guardian of a resident, ask the administrator
+                    to verify your guardian record using this account's email address.
+                </div>
+            {% endif %}
+        </section>
+
+        <!-- Active SOS alerts -->
+        <section class="card" aria-labelledby="alerts-heading">
+            <div class="card-header">
+                <h2 id="alerts-heading">Active SOS Alerts</h2>
+            </div>
+
+            <div class="note" style="margin-bottom: 14px;">
+                Alerts from your linked residents that are still open.
+                Responders handle acknowledgement and resolution, not guardians.
+            </div>
+
+            {% if active_alerts %}
+                <div class="grid" style="margin-top: 14px;">
+                    {% for alert in active_alerts %}
+                        <article class="item alert-item">
+                            <h3>{{ alert.get_category_display }} alert</h3>
+                            <p>
+                                <span class="label">Resident:</span>
+                                {{ alert.reporter.username }}
+                            </p>
+                            <p>
+                                <span class="label">Location:</span>
+                                {% if alert.location_text %}
+                                    {{ alert.location_text }}
+                                {% elif alert.latitude is not None and alert.longitude is not None %}
+                                    {{ alert.latitude }}, {{ alert.longitude }}
+                                {% else %}
+                                    Not provided
+                                {% endif %}
+                            </p>
+                            <p>
+                                <span class="label">Reported:</span>
+                                {{ alert.created_at|date:"d M Y, h:i A" }}
+                            </p>
+                            <p>
+                                <span class="label">Status:</span>
+                                <span class="badge navy">{{ alert.get_status_display }}</span>
+                            </p>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty">
+                    No active SOS alerts from your linked residents.
+                </div>
+            {% endif %}
+        </section>
+
+        <!-- Notifications -->
+        <section class="card" aria-labelledby="notifications-heading">
+            <div class="card-header">
+                <h2 id="notifications-heading">Notifications</h2>
+                <span class="badge navy">
+                    Unread: <span id="unread-count">{{ unread_count }}</span>
+                </span>
+            </div>
+
+            {% if notifications %}
+                <div class="grid">
+                    {% for notification in notifications %}
+                        <article class="item{% if notification.status == 'READ' %} is-read{% endif %}"
+                                 data-notification-id="{{ notification.id }}">
+                            <h3>{{ notification.alert.get_category_display }} alert</h3>
+                            <p>{{ notification.message }}</p>
+                            {% if notification.alert and notification.alert.reporter %}
+                            <p>
+                                <span class="label">Resident:</span>
+                                {{ notification.alert.reporter.get_full_name|default:notification.alert.reporter.username }}
+                            </p>
+                            {% endif %}
+                            {% if notification.alert and notification.alert.location_text %}
+                            <p>
+                                <span class="label">Location:</span>
+                                {{ notification.alert.location_text }}
+                            </p>
+                            {% endif %}
+                            {% if notification.alert and notification.alert.status %}
+                            <p>
+                                <span class="label">Alert status:</span>
+                                <span class="badge navy">{{ notification.alert.get_status_display }}</span>
+                            </p>
+                            {% endif %}
+                            <p>
+                                <span class="label">Received:</span>
+                                {{ notification.created_at|date:"d M Y, h:i A" }}
+                            </p>
+                            <p>
+                                <span class="label">Status:</span>
+                                <span class="badge notification-status">
+                                    {% if notification.status == 'READ' %}Read{% else %}Unread{% endif %}
+                                </span>
+                            </p>
+
+                            {% if notification.status != 'READ' %}
+                                <button type="button"
+                                        class="mark-read-button"
+                                        data-url="{% url 'emergency_alerts:mark_sos_notification_read' notification.id %}">
+                                    Mark as read
+                                </button>
+                            {% endif %}
+                        </article>
+                    {% endfor %}
+                </div>
+                <p class="action-error" id="action-error" role="alert" hidden></p>
+            {% else %}
+                <div class="empty">
+                    You have no notifications yet.
+                </div>
+            {% endif %}
+        </section>
+
+    </main>
+
+    <script>
+        (function () {
+            var tokenInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+            var csrfToken = tokenInput ? tokenInput.value : '';
+            var unreadCountEl = document.getElementById('unread-count');
+            var errorEl = document.getElementById('action-error');
+
+            function showError(message) {
+                if (!errorEl) {
+                    return;
+                }
+                errorEl.textContent = message;
+                errorEl.hidden = false;
+            }
+
+            function decrementUnread() {
+                if (!unreadCountEl) {
+                    return;
+                }
+                var current = parseInt(unreadCountEl.textContent, 10) || 0;
+                unreadCountEl.textContent = Math.max(0, current - 1);
+            }
+
+            document.querySelectorAll('.mark-read-button').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    var card = button.closest('[data-notification-id]');
+                    button.disabled = true;
+                    if (errorEl) {
+                        errorEl.hidden = true;
+                    }
+
+                    fetch(button.dataset.url, {
+                        method: 'PATCH',
+                        credentials: 'same-origin',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRFToken': csrfToken
+                        },
+                        body: JSON.stringify({})
+                    })
+                        .then(function (response) {
+                            if (!response.ok) {
+                                throw new Error('Request failed with status ' + response.status);
+                            }
+                            return response.json();
+                        })
+                        .then(function () {
+                            if (card) {
+                                card.classList.add('is-read');
+                                var badge = card.querySelector('.notification-status');
+                                if (badge) {
+                                    badge.textContent = 'Read';
+                                }
+                            }
+                            decrementUnread();
+                            button.remove();
+                        })
+                        .catch(function () {
+                            button.disabled = false;
+                            showError('Could not mark this notification as read. Please try again.');
+                        });
+                });
+            });
+        })();
+    </script>
+
+</body>
+</html>

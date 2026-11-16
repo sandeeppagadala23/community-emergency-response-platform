@@ -1,0 +1,179 @@
+{% extends 'base.html' %}
+
+{% block title %}Resident Registration - Community Emergency Response System{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center py-4">
+    <div class="col-12 col-sm-11 col-md-9 col-lg-7 col-xl-6">
+        <!-- Registration Card -->
+        <div class="app-card shadow-sm">
+            <div class="app-card-header text-center justify-content-center py-3">
+                <div>
+                    <h1 class="h5 fw-bold mb-1" style="color: var(--color-navy);">
+                        <i class="bi bi-person-plus me-1" style="color: var(--color-teal);"></i> Resident Account Registration
+                    </h1>
+                    <div class="text-muted small">Community Emergency Response System</div>
+                </div>
+            </div>
+
+            <div class="app-card-body p-4">
+                <!-- Registration Policy Notice -->
+                <div class="app-note mb-4">
+                    <strong><i class="bi bi-info-circle me-1"></i> Public Registration Scope:</strong>
+                    This portal registers community residents. Guardian, volunteer, and security accounts are provisioned directly by system administrators to maintain verified responder credentials.
+                </div>
+
+                <form method="POST" novalidate>
+                    {% csrf_token %}
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="username" class="form-label">Username <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted border-end-0">
+                                    <i class="bi bi-person"></i>
+                                </span>
+                                <input
+                                    type="text"
+                                    class="form-control border-start-0 ps-1"
+                                    id="username"
+                                    name="username"
+                                    value="{{ request.POST.username|default:'' }}"
+                                    placeholder="Enter username"
+                                    autocomplete="username"
+                                    maxlength="150"
+                                    required
+                                    autofocus
+                                >
+                            </div>
+                            <div class="form-text">Unique username for login.</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="email" class="form-label">Email Address <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted border-end-0">
+                                    <i class="bi bi-envelope"></i>
+                                </span>
+                                <input
+                                    type="email"
+                                    class="form-control border-start-0 ps-1"
+                                    id="email"
+                                    name="email"
+                                    value="{{ request.POST.email|default:'' }}"
+                                    placeholder="name@example.com"
+                                    autocomplete="email"
+                                    required
+                                >
+                            </div>
+                            <div class="form-text">Used for emergency alerts & notices.</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="phone_number" class="form-label">Phone Number <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted border-end-0">
+                                    <i class="bi bi-telephone"></i>
+                                </span>
+                                <input
+                                    type="tel"
+                                    class="form-control border-start-0 ps-1"
+                                    id="phone_number"
+                                    name="phone_number"
+                                    value="{{ request.POST.phone_number|default:'' }}"
+                                    placeholder="e.g. 9876543210"
+                                    maxlength="15"
+                                    autocomplete="tel"
+                                    pattern="[0-9+() -]{7,15}"
+                                    title="Enter a valid phone number using digits and optional +, spaces, hyphens, or parentheses."
+                                    required
+                                >
+                            </div>
+                            <div class="form-text">For SOS notifications & response contact.</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="role_display" class="form-label">Registration Role</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted border-end-0">
+                                    <i class="bi bi-shield-lock"></i>
+                                </span>
+                                <input
+                                    type="text"
+                                    class="form-control bg-light border-start-0 ps-1 text-muted"
+                                    id="role_display"
+                                    value="Resident (Community Member)"
+                                    readonly
+                                    aria-readonly="true"
+                                >
+                            </div>
+                            <input type="hidden" name="role" value="resident">
+                            <div class="form-text">Fixed to resident for public registration.</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="password" class="form-label">Password <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted border-end-0">
+                                    <i class="bi bi-lock"></i>
+                                </span>
+                                <input
+                                    type="password"
+                                    class="form-control border-start-0 ps-1"
+                                    id="password"
+                                    name="password"
+                                    placeholder="Minimum 8 characters"
+                                    autocomplete="new-password"
+                                    minlength="8"
+                                    required
+                                >
+                            </div>
+                            <div class="form-text">At least 8 characters required.</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="confirm_password" class="form-label">Confirm Password <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted border-end-0">
+                                    <i class="bi bi-lock-fill"></i>
+                                </span>
+                                <input
+                                    type="password"
+                                    class="form-control border-start-0 ps-1"
+                                    id="confirm_password"
+                                    name="confirm_password"
+                                    placeholder="Re-enter password"
+                                    autocomplete="new-password"
+                                    minlength="8"
+                                    required
+                                >
+                            </div>
+                            <div class="form-text">Must match the password entered above.</div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-teal py-2">
+                            <i class="bi bi-check-circle me-1"></i> Register Account
+                        </button>
+                    </div>
+                </form>
+
+                <hr class="my-4 text-muted opacity-25">
+
+                <div class="text-center small">
+                    <span class="text-muted">Already registered?</span>
+                    <a href="{% url 'login' %}" class="fw-semibold text-decoration-none ms-1" style="color: var(--color-navy);">
+                        Sign In here
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center text-muted small mt-3">
+            <i class="bi bi-shield-check me-1" style="color: var(--color-teal);"></i>
+            Community Emergency Response System &bull; Secure Registration
+        </div>
+    </div>
+</div>
+{% endblock %}

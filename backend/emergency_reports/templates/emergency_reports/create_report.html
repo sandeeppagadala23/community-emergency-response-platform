@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+
+{% block title %}Report an Emergency - Community Emergency Response System{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7 col-md-9">
+        <!-- Page Header -->
+        <div class="d-flex align-items-center gap-2 mb-4">
+            <a href="{% url 'dashboard' %}" class="btn btn-sm btn-outline-navy">
+                <i class="bi bi-arrow-left me-1"></i> Dashboard
+            </a>
+            <h1 class="h4 fw-bold mb-0" style="color: var(--color-navy);">
+                <i class="bi bi-pencil-square me-1"></i> Report an Emergency
+            </h1>
+        </div>
+
+        <!-- Report Form Card -->
+        <div class="app-card">
+            <div class="app-card-header">
+                <h2 class="app-card-title">
+                    <i class="bi bi-file-earmark-text" style="color: var(--color-teal);"></i>
+                    Incident Details
+                </h2>
+            </div>
+
+            <div class="app-card-body p-4">
+                <p class="text-muted small mb-3">
+                    Provide accurate details about the incident. Your report will be reviewed by authorised security personnel and community volunteers.
+                </p>
+
+                <form method="POST">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label for="title" class="form-label">
+                            Incident Title <span class="text-danger">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            name="title"
+                            id="title"
+                            class="form-control"
+                            maxlength="200"
+                            required
+                        >
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="incident_type" class="form-label">
+                            Emergency Type <span class="text-danger">*</span>
+                        </label>
+                        <select name="incident_type" id="incident_type" class="form-select" required>
+                            <option value="" selected disabled>Select emergency type</option>
+                            <option value="MEDICAL">Medical Emergency</option>
+                            <option value="FIRE">Fire</option>
+                            <option value="SECURITY">Security Issue</option>
+                            <option value="ACCIDENT">Accident</option>
+                            <option value="OTHER">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="location" class="form-label">
+                            Incident Location <span class="text-danger">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            name="location"
+                            id="location"
+                            class="form-control"
+                            placeholder="e.g. Block A, Flat A-101"
+                            maxlength="255"
+                            required
+                        >
+                        <div class="form-text">Specify the block, flat number, or area within the community.</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="description" class="form-label">
+                            Description <span class="text-danger">*</span>
+                        </label>
+                        <textarea
+                            name="description"
+                            id="description"
+                            class="form-control"
+                            rows="5"
+                            placeholder="Describe what happened, who is affected, and any immediate action taken..."
+                            required
+                        ></textarea>
+                        <div class="form-text">Include relevant details that will help responders understand the situation.</div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-sm-row gap-2">
+                        <button type="submit" class="btn btn-teal">
+                            <i class="bi bi-send me-1"></i> Submit Emergency Report
+                        </button>
+                        <a href="{% url 'emergency_reports:my_reports' %}" class="btn btn-outline-navy">
+                            <i class="bi bi-card-checklist me-1"></i> View My Reports
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Information Note -->
+        <div class="app-note">
+            <strong>Note:</strong> This form creates a written incident report for non-immediate follow-up.
+            For real-time emergency alerts, use the <strong>SOS Emergency</strong> trigger on your
+            <a href="{% url 'dashboard' %}" class="fw-semibold">dashboard</a>.
+        </div>
+    </div>
+</div>
+{% endblock %}

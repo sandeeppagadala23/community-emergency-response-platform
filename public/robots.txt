@@ -1,0 +1,16 @@
+User-agent: *
+Disallow: /api/
+Disallow: /alerts/
+Disallow: /reports/api/
+Disallow: /incidents
+Disallow: /incidents/
+Disallow: /notifications
+Disallow: /notifications/
+Disallow: /sos
+Disallow: /sos/
+Disallow: /my-incidents
+Disallow: /contacts
+Disallow: /reports
+Allow: /
+Allow: /login
+Allow: /register

@@ -1,0 +1,58 @@
+
+services:
+  - type: web
+    name: community-emergency-api
+    runtime: python
+    plan: starter
+    rootDir: backend
+
+    # Install dependencies and collect static files
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
+
+    # Start Django using Gunicorn
+    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
+
+    # Backend health check
+    healthCheckPath: /api/auth/csrf/
+
+    # Environment variables
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+
+      - key: DJANGO_DEBUG
+        value: "false"
+
+      - key: DJANGO_SECURE_COOKIES
+        value: "true"
+
+      - key: DJANGO_SECURE_SSL_REDIRECT
+        value: "true"
+
+      - key: DJANGO_SECURE_HSTS_SECONDS
+        value: "31536000"
+
+      - key: DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS
+        value: "true"
+
+      - key: DJANGO_SECURE_HSTS_PRELOAD
+        value: "false"
+
+      # Neon PostgreSQL connection string
+      - key: DATABASE_URL
+        sync: false
+
+      # Render backend domain
+      - key: DJANGO_ALLOWED_HOSTS
+        sync: false
+
+      # Vercel frontend origin
+      - key: DJANGO_CORS_ALLOWED_ORIGINS
+        sync: false
+
+      # Trusted frontend origins for Django CSRF
+      - key: DJANGO_CSRF_TRUSTED_ORIGINS
+        sync: false

@@ -1,0 +1,545 @@
+{% extends 'base.html' %}
+
+{% block title %}Resident Dashboard - Community Emergency Response System{% endblock %}
+
+{% block content %}
+<!-- Welcome & Resident Profile Overview -->
+<div class="app-card mb-4">
+    <div class="app-card-body p-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <h1 class="h4 fw-bold mb-0" style="color: var(--color-navy);">
+                        Welcome, {{ request.user.username }}!
+                    </h1>
+                    {% if profile and profile.is_verified %}
+                        <span class="badge bg-success-subtle text-success border border-success-subtle">
+                            <i class="bi bi-patch-check-fill me-1"></i> Verified Resident
+                        </span>
+                    {% else %}
+                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
+                            Resident
+                        </span>
+                    {% endif %}
+                </div>
+                <div class="text-muted small">
+                    Community Emergency Response System &bull; Resident Safety Console
+                </div>
+            </div>
+
+            <!-- Profile Meta Chips -->
+            <div class="d-flex flex-wrap gap-2">
+                <div class="p-2 px-3 bg-light rounded border border-light-subtle small">
+                    <span class="text-muted d-block" style="font-size: 0.75rem;">PHONE NUMBER</span>
+                    <strong class="text-dark">{{ profile.phone_number|default:"Not recorded" }}</strong>
+                </div>
+                <div class="p-2 px-3 bg-light rounded border border-light-subtle small">
+                    <span class="text-muted d-block" style="font-size: 0.75rem;">ASSIGNED FLAT</span>
+                    <strong class="text-dark">
+                        {% if user_flat %}
+                            {{ user_flat.block.society.name }} &bull; {{ user_flat.block.name }}-{{ user_flat.flat_number }}
+                        {% else %}
+                            General Resident
+                        {% endif %}
+                    </strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================
+     CRITICAL SOS EMERGENCY ACTION PANEL
+     ======================================================== -->
+<section class="sos-banner-card mb-4" aria-labelledby="sosHeading">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3">
+        <div>
+            <h2 id="sosHeading" class="sos-title mb-1">
+                <i class="bi bi-exclamation-octagon-fill"></i> Immediate Emergency SOS Trigger
+            </h2>
+            <p class="text-muted small mb-0">
+                Trigger an urgent broadcast. The system immediately registers the incident and notifies verified community responders and your linked guardians.
+            </p>
+        </div>
+        <span class="badge bg-danger text-white px-3 py-2 text-uppercase fw-bold" style="letter-spacing: 0.05em; font-size: 0.75rem;">
+            High Urgency
+        </span>
+    </div>
+
+    <!-- Mandatory Safety Warning -->
+    <div class="alert alert-warning border border-warning-subtle d-flex align-items-start gap-2 py-2 px-3 mb-3" role="alert">
+        <i class="bi bi-telephone-fill text-danger fs-5 mt-1"></i>
+        <div class="small">
+            <strong>Critical Notice:</strong> Triggering an SOS creates an emergency event in this portal and notifies your community responder network.
+            <strong>It does not automatically dial municipal emergency services.</strong> For life-threatening emergencies requiring national police, fire, or ambulance rescue in India, call <strong>112</strong> immediately.
+        </div>
+    </div>
+
+    <!-- Real-time Feedback Alert Container -->
+    <div id="sosFeedback" style="display: none;" class="mb-3" role="alert"></div>
+
+    <!-- Live SOS Trigger Form -->
+    <form id="sosForm" novalidate>
+        <div class="row g-3 align-items-end">
+            <div class="col-12 col-md-4">
+                <label for="sosCategory" class="form-label fw-bold small text-dark">
+                    Emergency Category <span class="text-danger">*</span>
+                </label>
+                <select id="sosCategory" class="form-select" required>
+                    <option value="" selected disabled>Select incident type...</option>
+                    {% for cat_val, cat_label in sos_categories %}
+                        <option value="{{ cat_val }}">{{ cat_label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-12 col-md-5">
+                <label for="sosDetails" class="form-label fw-bold small text-dark">
+                    Location & Brief Details (Optional)
+                </label>
+                <input
+                    type="text"
+                    id="sosDetails"
+                    class="form-control"
+                    placeholder="e.g. Flat 302 - Elderly member collapsed, need immediate aid"
+                    maxlength="255"
+                >
+            </div>
+
+            <div class="col-12 col-md-3">
+                <button type="submit" id="sosSubmitBtn" class="btn btn-emergency-sos w-100">
+                    <i class="bi bi-broadcast"></i> Send Emergency SOS
+                </button>
+            </div>
+        </div>
+    </form>
+</section>
+
+<!-- Dashboard Main Columns -->
+<div class="row g-4">
+    <!-- Left Column: SOS Alert Log & Incident Reports (8 cols) -->
+    <div class="col-lg-8">
+        <!-- Card 1: My Recent SOS Alerts -->
+        <div class="app-card mb-4">
+            <div class="app-card-header">
+                <h3 class="app-card-title">
+                    <i class="bi bi-clock-history" style="color: var(--color-teal);"></i>
+                    My SOS Emergency History
+                </h3>
+                <span class="badge bg-light text-muted border">Real-time status</span>
+            </div>
+
+            <div class="table-responsive">
+                <table class="app-table table mb-0 align-middle">
+                    <thead>
+                        <tr>
+                            <th scope="col" style="width: 70px;">Alert ID</th>
+                            <th scope="col">Category</th>
+                            <th scope="col">Location / Details</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Raised At</th>
+                            <th scope="col" class="text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sosAlertsTableBody">
+                        {% if recent_sos_alerts %}
+                            {% for alert in recent_sos_alerts %}
+                                <tr id="sos-row-{{ alert.id }}">
+                                    <td class="fw-bold">#{{ alert.id }}</td>
+                                    <td>
+                                        <span class="fw-semibold text-dark">
+                                            {{ alert.get_category_display }}
+                                        </span>
+                                    </td>
+                                    <td class="text-muted small">
+                                        {{ alert.location_text|default:alert.message|default:"No details specified" }}
+                                    </td>
+                                    <td>
+                                        {% if alert.status == 'PENDING' %}
+                                            <span class="badge badge-status badge-status-pending">
+                                                <i class="bi bi-exclamation-circle-fill"></i> Pending
+                                            </span>
+                                        {% elif alert.status == 'ACKNOWLEDGED' %}
+                                            <span class="badge badge-status badge-status-acknowledged">
+                                                <i class="bi bi-check-circle"></i> Acknowledged
+                                            </span>
+                                        {% elif alert.status == 'RESOLVED' %}
+                                            <span class="badge badge-status badge-status-resolved">
+                                                <i class="bi bi-check-all"></i> Resolved
+                                            </span>
+                                        {% elif alert.status == 'IN_PROGRESS' %}
+                                            <span class="badge badge-status badge-status-in-progress">
+                                                <i class="bi bi-arrow-repeat"></i> In Progress
+                                            </span>
+                                        {% else %}
+                                            <span class="badge badge-status badge-status-cancelled">
+                                                {{ alert.status }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-muted small">
+                                        {{ alert.created_at|date:"d M Y, h:i A" }}
+                                    </td>
+                                    <td class="text-end">
+                                        {% if alert.status == 'PENDING' or alert.status == 'ACKNOWLEDGED' or alert.status == 'IN_PROGRESS' %}
+                                            <button
+                                                type="button"
+                                                class="btn btn-sm btn-outline-teal resolve-sos-btn"
+                                                data-alert-id="{{ alert.id }}"
+                                                title="Mark this emergency alert as resolved"
+                                            >
+                                                <i class="bi bi-check-lg me-1"></i> Resolve
+                                            </button>
+                                        {% else %}
+                                            <span class="text-muted small">Closed</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr id="noSosRow">
+                                <td colspan="6" class="text-center py-4 text-muted">
+                                    <i class="bi bi-shield-check d-block fs-3 mb-2" style="color: var(--color-teal);"></i>
+                                    No active or previous SOS alerts raised. Your emergency alert records will be tracked here.
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Card 2: Written Incident Reports -->
+        <div class="app-card mb-4">
+            <div class="app-card-header">
+                <h3 class="app-card-title">
+                    <i class="bi bi-file-earmark-text" style="color: var(--color-navy);"></i>
+                    My Incident Reports
+                </h3>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'emergency_reports:my_reports' %}" class="btn btn-sm btn-outline-navy">
+                        <i class="bi bi-card-checklist me-1"></i> All Reports
+                    </a>
+                    <a href="{% url 'emergency_reports:create_report' %}" class="btn btn-sm btn-teal">
+                        <i class="bi bi-plus-circle me-1"></i> Report Incident
+                    </a>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="app-table table mb-0 align-middle">
+                    <thead>
+                        <tr>
+                            <th scope="col">Incident Type</th>
+                            <th scope="col">Location</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Date Submitted</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if recent_reports %}
+                            {% for report in recent_reports %}
+                                <tr>
+                                    <td>
+                                        <span class="fw-semibold text-dark">
+                                            {{ report.get_incident_type_display }}
+                                        </span>
+                                    </td>
+                                    <td class="text-muted small">{{ report.location }}</td>
+                                    <td>
+                                        {% if report.status == 'PENDING' %}
+                                            <span class="badge badge-status badge-status-pending">Pending</span>
+                                        {% elif report.status == 'ACKNOWLEDGED' %}
+                                            <span class="badge badge-status badge-status-acknowledged">Acknowledged</span>
+                                        {% elif report.status == 'IN_PROGRESS' %}
+                                            <span class="badge badge-status badge-status-in-progress">In Progress</span>
+                                        {% elif report.status == 'RESOLVED' %}
+                                            <span class="badge badge-status badge-status-resolved">Resolved</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-muted small">
+                                        {{ report.created_at|date:"d M Y, h:i A" }}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center py-4 text-muted">
+                                    No written incident reports filed yet. For non-instant reports, click "Report Incident".
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Notifications & Emergency Directory (4 cols) -->
+    <div class="col-lg-4">
+        <!-- Card 3: In-App Notifications Feed -->
+        <div class="app-card mb-4">
+            <div class="app-card-header">
+                <h3 class="app-card-title">
+                    <i class="bi bi-bell" style="color: var(--color-teal);"></i>
+                    Notifications
+                </h3>
+                <span class="badge bg-light text-muted border">Recent</span>
+            </div>
+
+            <div class="app-card-body p-3">
+                {% if user_notifications %}
+                    <ul class="list-unstyled mb-0">
+                        {% for notif in user_notifications %}
+                            <li class="p-2 mb-2 rounded border bg-light-subtle">
+                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                    <span class="badge {% if notif.status == 'READ' %}bg-secondary{% else %}bg-primary{% endif %}" style="font-size: 0.7rem;">
+                                        {{ notif.status }}
+                                    </span>
+                                    <span class="text-muted" style="font-size: 0.75rem;">
+                                        {{ notif.created_at|timesince }} ago
+                                    </span>
+                                </div>
+                                <div class="small text-dark mb-0">
+                                    {{ notif.message }}
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="text-center py-3 text-muted small">
+                        <i class="bi bi-bell-slash fs-4 d-block mb-1 text-muted"></i>
+                        No alerts or notifications recorded for your account.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Card 4: Community Emergency Contacts Directory -->
+        <div class="app-card mb-4">
+            <div class="app-card-header">
+                <h3 class="app-card-title">
+                    <i class="bi bi-telephone-outbound" style="color: var(--color-navy);"></i>
+                    Emergency Directory
+                </h3>
+            </div>
+
+            <div class="app-card-body p-3">
+                {% if emergency_contacts %}
+                    <div class="d-flex flex-column gap-2">
+                        {% for contact in emergency_contacts %}
+                            <div class="p-2 px-3 rounded border border-light-subtle bg-light">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <strong class="text-dark small">{{ contact.name }}</strong>
+                                    <span class="badge bg-secondary-subtle text-dark" style="font-size: 0.7rem;">
+                                        {{ contact.get_service_type_display }}
+                                    </span>
+                                </div>
+                                <div class="mt-1 d-flex justify-content-between align-items-center">
+                                    <a href="tel:{{ contact.phone_number }}" class="text-decoration-none fw-bold small" style="color: var(--color-teal);">
+                                        <i class="bi bi-telephone-fill me-1"></i> {{ contact.phone_number }}
+                                    </a>
+                                    {% if contact.society %}
+                                        <span class="text-muted" style="font-size: 0.75rem;">
+                                            {{ contact.society.name }}
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-3 text-muted small">
+                        No emergency contacts registered in directory.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const sosForm = document.getElementById('sosForm');
+    const sosSubmitBtn = document.getElementById('sosSubmitBtn');
+    const sosCategory = document.getElementById('sosCategory');
+    const sosDetails = document.getElementById('sosDetails');
+    const sosFeedback = document.getElementById('sosFeedback');
+    const alertsTableBody = document.getElementById('sosAlertsTableBody');
+
+    // Handle SOS Form Submission via AJAX to existing /alerts/api/sos/
+    if (sosForm) {
+        sosForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const category = sosCategory.value;
+            const details = (sosDetails.value || '').trim();
+
+            if (!category) {
+                showFeedback('danger', 'Please select an emergency category before sending an SOS alert.');
+                sosCategory.focus();
+                return;
+            }
+
+            // Disable button during network dispatch
+            sosSubmitBtn.disabled = true;
+            sosSubmitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Dispatching SOS...';
+            hideFeedback();
+
+            try {
+                const response = await fetch('/alerts/api/sos/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    body: JSON.stringify({
+                        category: category,
+                        message: details,
+                        location_text: details
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    const notifCount = data.notifications_created || 0;
+                    showFeedback(
+                        'success',
+                        `<strong>Emergency SOS #${data.id} Dispatched!</strong> Incident logged with status "${data.status}". Dispatched ${notifCount} notification(s) to community responders & verified guardians.`
+                    );
+
+                    // Prepend new row to SOS alerts table
+                    insertSosRow(data);
+
+                    // Reset form
+                    sosCategory.value = '';
+                    sosDetails.value = '';
+                } else {
+                    const errorMsg = data.detail || (data.category ? data.category.join(' ') : 'Unable to dispatch SOS alert. Please try again or call 112 directly.');
+                    showFeedback('danger', `<strong>Error:</strong> ${errorMsg}`);
+                }
+            } catch (err) {
+                showFeedback('danger', 'Network communication error. Please call 112 immediately for emergency services.');
+            } finally {
+                sosSubmitBtn.disabled = false;
+                sosSubmitBtn.innerHTML = '<i class="bi bi-broadcast"></i> Send Emergency SOS';
+            }
+        });
+    }
+
+    // Handle SOS Resolve buttons via existing /alerts/api/sos/<id>/resolve/
+    document.addEventListener('click', async function (e) {
+        const resolveBtn = e.target.closest('.resolve-sos-btn');
+        if (!resolveBtn) return;
+
+        const alertId = resolveBtn.getAttribute('data-alert-id');
+        if (!alertId) return;
+
+        if (!confirm(`Are you sure you want to mark SOS Alert #${alertId} as resolved?`)) {
+            return;
+        }
+
+        resolveBtn.disabled = true;
+        resolveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Resolving...';
+
+        try {
+            const response = await fetch(`/alerts/api/sos/${alertId}/resolve/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                }
+            });
+
+            if (response.ok) {
+                const row = document.getElementById(`sos-row-${alertId}`);
+                if (row) {
+                    // Update status badge to Resolved
+                    const statusTd = row.children[3];
+                    if (statusTd) {
+                        statusTd.innerHTML = '<span class="badge badge-status badge-status-resolved"><i class="bi bi-check-all"></i> Resolved</span>';
+                    }
+                    // Update action column
+                    const actionTd = row.children[5];
+                    if (actionTd) {
+                        actionTd.innerHTML = '<span class="text-muted small">Closed</span>';
+                    }
+                }
+                showFeedback('success', `SOS Alert #${alertId} has been marked as resolved.`);
+            } else {
+                const errData = await response.json();
+                showFeedback('danger', errData.detail || 'Could not resolve the alert.');
+                resolveBtn.disabled = false;
+                resolveBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Resolve';
+            }
+        } catch (err) {
+            showFeedback('danger', 'Network error resolving alert.');
+            resolveBtn.disabled = false;
+            resolveBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Resolve';
+        }
+    });
+
+    function showFeedback(type, htmlContent) {
+        if (!sosFeedback) return;
+        sosFeedback.className = `alert alert-${type} alert-dismissible fade show`;
+        sosFeedback.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="bi ${type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill'} me-2 fs-5"></i>
+                <div class="flex-grow-1">${htmlContent}</div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        `;
+        sosFeedback.style.display = 'block';
+    }
+
+    function hideFeedback() {
+        if (!sosFeedback) return;
+        sosFeedback.style.display = 'none';
+        sosFeedback.innerHTML = '';
+    }
+
+    function insertSosRow(alertData) {
+        const noSosRow = document.getElementById('noSosRow');
+        if (noSosRow) {
+            noSosRow.remove();
+        }
+
+        const tr = document.createElement('tr');
+        tr.id = `sos-row-${alertData.id}`;
+        tr.className = 'table-danger-subtle';
+
+        const categoryText = alertData.category || 'Emergency';
+        const detailsText = alertData.location_text || alertData.message || 'No details specified';
+        const formattedDate = new Date(alertData.created_at).toLocaleString('en-IN', {
+            day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true
+        });
+
+        tr.innerHTML = `
+            <td class="fw-bold">#${alertData.id}</td>
+            <td><span class="fw-semibold text-dark">${categoryText}</span></td>
+            <td class="text-muted small">${detailsText}</td>
+            <td>
+                <span class="badge badge-status badge-status-pending">
+                    <i class="bi bi-exclamation-circle-fill"></i> Pending
+                </span>
+            </td>
+            <td class="text-muted small">${formattedDate}</td>
+            <td class="text-end">
+                <button type="button" class="btn btn-sm btn-outline-teal resolve-sos-btn" data-alert-id="${alertData.id}">
+                    <i class="bi bi-check-lg me-1"></i> Resolve
+                </button>
+            </td>
+        `;
+
+        if (alertsTableBody.firstChild) {
+            alertsTableBody.insertBefore(tr, alertsTableBody.firstChild);
+        } else {
+            alertsTableBody.appendChild(tr);
+        }
+    }
+});
+</script>
+{% endblock %}

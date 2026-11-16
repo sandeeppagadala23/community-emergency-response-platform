@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+
+{% block title %}Sign In - Community Emergency Response System{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center py-4">
+    <div class="col-12 col-sm-10 col-md-8 col-lg-5 col-xl-4">
+        <!-- Login Card -->
+        <div class="app-card shadow-sm">
+            <div class="app-card-header text-center justify-content-center py-3">
+                <div>
+                    <h1 class="h5 fw-bold mb-1" style="color: var(--color-navy);">
+                        <i class="bi bi-box-arrow-in-right me-1" style="color: var(--color-teal);"></i> Account Sign In
+                    </h1>
+                    <div class="text-muted small">Community Emergency Response System</div>
+                </div>
+            </div>
+
+            <div class="app-card-body p-4">
+                <form method="POST" novalidate>
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light text-muted border-end-0">
+                                <i class="bi bi-person"></i>
+                            </span>
+                            <input
+                                type="text"
+                                class="form-control border-start-0 ps-1"
+                                id="username"
+                                name="username"
+                                value="{{ request.POST.username|default:'' }}"
+                                placeholder="Enter your username"
+                                autocomplete="username"
+                                required
+                                autofocus
+                            >
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light text-muted border-end-0">
+                                <i class="bi bi-lock"></i>
+                            </span>
+                            <input
+                                type="password"
+                                class="form-control border-start-0 ps-1"
+                                id="password"
+                                name="password"
+                                placeholder="Enter your password"
+                                autocomplete="current-password"
+                                required
+                            >
+                        </div>
+                    </div>
+
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-navy py-2">
+                            <i class="bi bi-box-arrow-in-right me-1"></i> Sign In
+                        </button>
+                    </div>
+                </form>
+
+                <hr class="my-4 text-muted opacity-25">
+
+                <div class="text-center small">
+                    <span class="text-muted">Need a resident account?</span>
+                    <a href="{% url 'register' %}" class="fw-semibold text-decoration-none ms-1" style="color: var(--color-teal);">
+                        Register as Resident
+                    </a>
+                </div>
+
+                <div class="text-center small mt-3 p-2 bg-light rounded border border-light-subtle">
+                    <div class="text-muted" style="font-size: 0.8rem;">
+                        <i class="bi bi-shield-lock me-1"></i>
+                        Guardian, volunteer, and security accounts are issued by community administration.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center text-muted small mt-3">
+            <i class="bi bi-shield-check me-1" style="color: var(--color-teal);"></i>
+            Secure community emergency management portal
+        </div>
+    </div>
+</div>
+{% endblock %}

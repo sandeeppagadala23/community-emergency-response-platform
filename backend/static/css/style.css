@@ -1,0 +1,473 @@
+/* ==========================================================================
+   Community Emergency Response System - Core Design Tokens & Stylesheet
+   Designed for academic & real-world community emergency deployment
+   Palette: Navy Blue (#183153), White (#FFFFFF), Light Grey (#F4F6F8),
+            Teal (#168C86), Emergency Red (#C62828)
+   ========================================================================== */
+
+:root {
+    /* Primary Colors */
+    --color-navy: #183153;
+    --color-navy-dark: #10223B;
+    --color-navy-light: #24426A;
+
+    --color-teal: #168C86;
+    --color-teal-dark: #116F6A;
+    --color-teal-light: #EBF7F6;
+
+    /* Emergency Red (Strictly for SOS and Critical alerts) */
+    --color-emergency-red: #C62828;
+    --color-emergency-red-dark: #A31F1F;
+    --color-emergency-red-light: #FDE8E8;
+
+    /* Neutrals & Surfaces */
+    --color-white: #FFFFFF;
+    --color-bg-light: #F4F6F8;
+    --color-card-bg: #FFFFFF;
+    --color-border: #E2E8F0;
+    --color-border-subtle: #EDF2F7;
+    --color-border-dark: #CBD5E1;
+
+    /* Typography */
+    --color-text-main: #1E293B;
+    --color-text-muted: #64748B;
+    --color-text-subtle: #475569;
+    --font-family-base: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+    /* Standard Shadows (Subtle, non-glowing) */
+    --shadow-subtle: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+    --shadow-card: 0 2px 6px rgba(15, 23, 42, 0.05);
+
+    /* Border Radius */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+}
+
+/* ---------------- Base Page Layout ---------------- */
+html, body {
+    height: 100%;
+}
+
+body {
+    font-family: var(--font-family-base);
+    background-color: var(--color-bg-light);
+    color: var(--color-text-main);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+}
+
+main.main-content {
+    flex: 1 0 auto;
+    padding-top: 1.75rem;
+    padding-bottom: 3rem;
+}
+
+/* ---------------- Navigation Bar ---------------- */
+.navbar-custom {
+    background-color: var(--color-navy);
+    border-bottom: 2px solid var(--color-navy-dark);
+    padding-top: 0.65rem;
+    padding-bottom: 0.65rem;
+}
+
+.navbar-custom .navbar-brand {
+    color: var(--color-white);
+    font-weight: 700;
+    font-size: 1.15rem;
+    letter-spacing: -0.01em;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.navbar-custom .navbar-brand:hover {
+    color: #F1F5F9;
+}
+
+.navbar-custom .brand-badge {
+    background-color: var(--color-teal);
+    color: var(--color-white);
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.2rem 0.5rem;
+    border-radius: var(--radius-sm);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.navbar-custom .nav-link {
+    color: #D1D9E0;
+    font-weight: 500;
+    font-size: 0.92rem;
+    padding: 0.45rem 0.8rem;
+    border-radius: var(--radius-sm);
+    transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.navbar-custom .nav-link:hover,
+.navbar-custom .nav-link:focus {
+    color: var(--color-white);
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.navbar-custom .nav-link.active {
+    color: var(--color-white);
+    background-color: var(--color-teal);
+}
+
+.navbar-custom .user-pill {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--color-white);
+    padding: 0.35rem 0.75rem;
+    border-radius: var(--radius-md);
+    font-size: 0.88rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.navbar-custom .btn-logout {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: #D1D9E0;
+    font-size: 0.85rem;
+    font-weight: 500;
+    padding: 0.35rem 0.75rem;
+    border-radius: var(--radius-md);
+    transition: all 0.15s ease;
+}
+
+.navbar-custom .btn-logout:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+    color: var(--color-white);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* ---------------- Role & Status Badges ---------------- */
+.badge-role {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.25rem 0.55rem;
+    border-radius: var(--radius-sm);
+    text-transform: capitalize;
+}
+
+.badge-role-resident {
+    background-color: #E2E8F0;
+    color: #1E293B;
+}
+
+.badge-role-guardian {
+    background-color: var(--color-teal-light);
+    color: var(--color-teal-dark);
+    border: 1px solid rgba(22, 140, 134, 0.25);
+}
+
+.badge-role-security {
+    background-color: #FEF3C7;
+    color: #92400E;
+    border: 1px solid rgba(146, 64, 14, 0.25);
+}
+
+.badge-role-volunteer {
+    background-color: #EDE9FE;
+    color: #5B21B6;
+    border: 1px solid rgba(91, 33, 182, 0.25);
+}
+
+/* Incident and Alert Status Badges */
+.badge-status {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.3rem 0.6rem;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.badge-status-pending {
+    background-color: var(--color-emergency-red-light);
+    color: var(--color-emergency-red);
+    border: 1px solid rgba(198, 40, 40, 0.3);
+}
+
+.badge-status-acknowledged {
+    background-color: #FEF3C7;
+    color: #92400E;
+    border: 1px solid #FCD34D;
+}
+
+.badge-status-in-progress {
+    background-color: var(--color-teal-light);
+    color: var(--color-teal-dark);
+    border: 1px solid rgba(22, 140, 134, 0.3);
+}
+
+.badge-status-resolved {
+    background-color: #DEF7EC;
+    color: #03543F;
+    border: 1px solid #BCF0DA;
+}
+
+.badge-status-cancelled {
+    background-color: #F1F5F9;
+    color: #64748B;
+    border: 1px solid #CBD5E1;
+}
+
+/* ---------------- Cards & Panels ---------------- */
+.app-card {
+    background: var(--color-white);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    margin-bottom: 1.5rem;
+}
+
+.app-card-header {
+    background-color: #FAFBFD;
+    border-bottom: 1px solid var(--color-border);
+    padding: 0.9rem 1.25rem;
+    border-top-left-radius: var(--radius-lg);
+    border-top-right-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.app-card-title {
+    color: var(--color-navy);
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.app-card-body {
+    padding: 1.25rem;
+}
+
+/* ---------------- SOS Emergency Action Component ---------------- */
+.sos-banner-card {
+    background: #FFFBFB;
+    border: 1.5px solid var(--color-emergency-red);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.75rem;
+    box-shadow: 0 2px 6px rgba(198, 40, 40, 0.08);
+}
+
+.sos-banner-card .sos-title {
+    color: var(--color-emergency-red);
+    font-weight: 800;
+    font-size: 1.15rem;
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-emergency-sos {
+    background-color: var(--color-emergency-red);
+    color: var(--color-white);
+    font-weight: 700;
+    font-size: 1rem;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: var(--radius-md);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: background-color 0.15s ease;
+}
+
+.btn-emergency-sos:hover,
+.btn-emergency-sos:focus {
+    background-color: var(--color-emergency-red-dark);
+    color: var(--color-white);
+}
+
+/* ---------------- Standard Buttons ---------------- */
+.btn-navy {
+    background-color: var(--color-navy);
+    color: var(--color-white);
+    border: 1px solid var(--color-navy-dark);
+    font-weight: 600;
+    padding: 0.55rem 1.15rem;
+    border-radius: var(--radius-md);
+    transition: background-color 0.15s ease;
+}
+
+.btn-navy:hover,
+.btn-navy:focus {
+    background-color: var(--color-navy-dark);
+    color: var(--color-white);
+}
+
+.btn-teal {
+    background-color: var(--color-teal);
+    color: var(--color-white);
+    border: 1px solid var(--color-teal-dark);
+    font-weight: 600;
+    padding: 0.55rem 1.15rem;
+    border-radius: var(--radius-md);
+    transition: background-color 0.15s ease;
+}
+
+.btn-teal:hover,
+.btn-teal:focus {
+    background-color: var(--color-teal-dark);
+    color: var(--color-white);
+}
+
+.btn-outline-navy {
+    background-color: transparent;
+    color: var(--color-navy);
+    border: 1px solid var(--color-navy);
+    font-weight: 600;
+    padding: 0.55rem 1.15rem;
+    border-radius: var(--radius-md);
+    transition: all 0.15s ease;
+}
+
+.btn-outline-navy:hover,
+.btn-outline-navy:focus {
+    background-color: var(--color-navy);
+    color: var(--color-white);
+}
+
+.btn-outline-teal {
+    background-color: transparent;
+    color: var(--color-teal);
+    border: 1px solid var(--color-teal);
+    font-weight: 600;
+    padding: 0.45rem 0.95rem;
+    border-radius: var(--radius-md);
+    transition: all 0.15s ease;
+}
+
+.btn-outline-teal:hover,
+.btn-outline-teal:focus {
+    background-color: var(--color-teal);
+    color: var(--color-white);
+}
+
+/* ---------------- Tables ---------------- */
+.app-table {
+    width: 100%;
+    margin-bottom: 0;
+    font-size: 0.92rem;
+}
+
+.app-table th {
+    background-color: #F8FAFC;
+    color: var(--color-text-subtle);
+    font-weight: 600;
+    border-bottom: 1px solid var(--color-border);
+    padding: 0.75rem 1rem;
+    white-space: nowrap;
+}
+
+.app-table td {
+    padding: 0.8rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--color-border-subtle);
+    color: var(--color-text-main);
+}
+
+.app-table tr:last-child td {
+    border-bottom: none;
+}
+
+.app-table tbody tr:hover {
+    background-color: #F9FAFB;
+}
+
+/* ---------------- Forms ---------------- */
+.form-label {
+    font-weight: 600;
+    color: var(--color-text-main);
+    font-size: 0.9rem;
+    margin-bottom: 0.35rem;
+}
+
+.form-control, .form-select {
+    border: 1px solid var(--color-border-dark);
+    border-radius: var(--radius-md);
+    padding: 0.6rem 0.85rem;
+    font-size: 0.95rem;
+    color: var(--color-text-main);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--color-teal);
+    box-shadow: 0 0 0 3px rgba(22, 140, 134, 0.18);
+    outline: none;
+}
+
+.form-text {
+    font-size: 0.82rem;
+    color: var(--color-text-muted);
+}
+
+.input-group-text {
+    border-color: var(--color-border-dark);
+    background-color: #F8FAFC;
+    color: var(--color-text-muted);
+}
+
+/* ---------------- Callouts & Informational Notes ---------------- */
+.app-note {
+    background-color: #FFFBEB;
+    border-left: 4px solid #D97706;
+    border-radius: var(--radius-sm);
+    padding: 0.85rem 1.15rem;
+    font-size: 0.9rem;
+    color: #92400E;
+    margin-bottom: 1.25rem;
+}
+
+.app-note strong {
+    color: #78350F;
+}
+
+/* ---------------- Footer ---------------- */
+footer.app-footer {
+    background-color: #FFFFFF;
+    border-top: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+    padding: 1.25rem 0;
+    margin-top: auto;
+}
+
+footer.app-footer .footer-title {
+    font-weight: 600;
+    color: var(--color-navy);
+}
+
+/* ---------------- Responsive Tweaks ---------------- */
+@media (max-width: 768px) {
+    main.main-content {
+        padding-top: 1.25rem;
+    }
+
+    .app-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .btn-emergency-sos {
+        width: 100%;
+    }
+}
