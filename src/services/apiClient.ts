@@ -165,8 +165,8 @@ export class ApiClient {
 
     // Ensure a CSRF token is available when required (do not self-recurse if already requesting csrf).
     if (requiresCsrf && cleanEndpoint !== '/api/auth/csrf/') {
-      const cookieToken = this.getCookie('csrftoken');
-      if (!cookieToken) {
+      const activeCsrfToken = this.csrfToken || this.getCookie('csrftoken');
+      if (!activeCsrfToken) {
         await this.refreshCsrfToken();
       }
     }
@@ -183,9 +183,9 @@ export class ApiClient {
     }
 
     if (requiresCsrf) {
-      const cookieToken = this.getCookie('csrftoken');
-      if (cookieToken) {
-        headers['X-CSRFToken'] = cookieToken;
+      const activeCsrfToken = this.csrfToken || this.getCookie('csrftoken');
+      if (activeCsrfToken) {
+        headers['X-CSRFToken'] = activeCsrfToken;
       }
     }
 

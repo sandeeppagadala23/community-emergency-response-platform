@@ -1,4 +1,4 @@
-
+﻿
 import os
 from pathlib import Path
 from urllib.parse import urlparse, unquote, parse_qs
@@ -271,7 +271,7 @@ CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOWED_ORIGINS = _environment_list(
     "DJANGO_CORS_ALLOWED_ORIGINS",
-    "http://localhost:5173,http://127.0.0.1:5173",
+    "http://localhost:5173,http://127.0.0.1:5173,https://community-emergency-response-platfo-chi.vercel.app",
 )
 
 CORS_ALLOW_HEADERS = (*default_headers,)
@@ -341,3 +341,4 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.SessionAuthentication",
     ],
 }
+
