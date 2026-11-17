@@ -1,4 +1,4 @@
-﻿
+
 import os
 from pathlib import Path
 from urllib.parse import urlparse, unquote, parse_qs
@@ -14,7 +14,7 @@ load_dotenv(BASE_DIR / ".env")
 
 def _environment_list(name, default):
     return [
-        value.strip()
+        value.strip().rstrip("/")
         for value in os.environ.get(name, default).split(",")
         if value.strip()
     ]
@@ -106,6 +106,7 @@ INSTALLED_APPS = [
 ]
 
 
+# CORS middleware must be placed before CommonMiddleware.
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
@@ -156,7 +157,6 @@ if DATABASE_URL:
         raise ValueError("DATABASE_URL must use PostgreSQL.")
 
     database_query = parse_qs(parsed_database_url.query)
-
     database_name = unquote(parsed_database_url.path.lstrip("/"))
 
     if not all([
@@ -176,9 +176,7 @@ if DATABASE_URL:
             "PORT": parsed_database_url.port or 5432,
             "CONN_MAX_AGE": 60,
             "OPTIONS": {
-                "sslmode": database_query.get(
-                    "sslmode", ["require"]
-                )[0],
+                "sslmode": database_query.get("sslmode", ["require"])[0],
             },
         }
     }
@@ -271,10 +269,15 @@ CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOWED_ORIGINS = _environment_list(
     "DJANGO_CORS_ALLOWED_ORIGINS",
-    "http://localhost:5173,http://127.0.0.1:5173,https://community-emergency-response-platfo-chi.vercel.app",
+    "http://localhost:5173,"
+    "http://127.0.0.1:5173,"
+    "https://community-emergency-response-platfo-chi.vercel.app",
 )
 
-CORS_ALLOW_HEADERS = (*default_headers,)
+CORS_ALLOW_HEADERS = (
+    *default_headers,
+    "idempotency-key",
+)
 
 
 # ---------------------------------------------------------------------------
@@ -287,7 +290,8 @@ CSRF_TRUSTED_ORIGINS = _environment_list(
     "http://127.0.0.1:5173,"
     "http://localhost:4173,"
     "http://127.0.0.1:4173,"
-    "https://m4n4jr4f-4173.inc1.devtunnels.ms",
+    "https://m4n4jr4f-4173.inc1.devtunnels.ms,"
+    "https://community-emergency-response-platfo-chi.vercel.app",
 )
 
 
@@ -300,7 +304,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # ---------------------------------------------------------------------------
 # LOGGING
-# Keep detailed CSRF diagnostics in local development only.
 # ---------------------------------------------------------------------------
 
 LOGGING = {
@@ -341,4 +344,3 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.SessionAuthentication",
     ],
 }
-
