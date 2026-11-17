@@ -23,18 +23,7 @@ from emergency_reports.models import EmergencyReport
 
 
 def root_redirect_view(request):
-    if request.user.is_authenticated:
-        try:
-            profile = request.user.profile
-        except UserProfile.DoesNotExist:
-            profile = None
-
-        if profile and profile.role == 'guardian':
-            return redirect('guardian_dashboard')
-
-        return redirect('dashboard')
-
-    return redirect('login')
+    return redirect("https://community-emergency-response-platfo-chi.vercel.app/")
 
 
 def register_view(request):
@@ -252,3 +241,4 @@ def guardian_dashboard_view(request):
         'users/guardian_dashboard.html',
         context,
     )
+
