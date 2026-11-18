@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 
 from emergency_contacts.models import GuardianContact
+from users.guardian import get_guardians_for_resident
 from users.models import UserProfile
 
 from .models import ResponderAssignment, SOSAlert, SOSNotification
@@ -34,33 +35,13 @@ def create_assignment_notification(assignment: ResponderAssignment) -> tuple[SOS
 
 def notify_sos_recipients(alert: SOSAlert) -> int:
     """Create inbox alerts and console-only email/SMS simulations."""
-    recipients = set()
-    guardian_contacts = (
+    recipients = set(get_guardians_for_resident(alert.reporter))
+    guardian_contacts = list(
         GuardianContact.objects.filter(
             resident=alert.reporter,
             is_verified=True,
         )
-        .exclude(email__isnull=True)
-        .exclude(email__exact="")
     )
-
-    all_guardians = list(
-        User.objects.filter(
-            is_active=True,
-            profile__role__iexact="guardian",
-        )
-        .exclude(pk=alert.reporter_id)
-        .select_related("profile")
-    )
-
-    for contact in guardian_contacts:
-        contact_email = (contact.email or "").strip().lower()
-        if not contact_email:
-            continue
-        for guardian_user in all_guardians:
-            guardian_email = (guardian_user.email or "").strip().lower()
-            if guardian_email == contact_email:
-                recipients.add(guardian_user)
 
     security_profiles = list(
         UserProfile.objects.filter(

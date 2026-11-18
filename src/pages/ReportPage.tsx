@@ -586,7 +586,9 @@ export const ReportPage: React.FC = () => {
           </div>
         ) : reports.length === 0 ? (
           <p className="rounded-control border border-dashed border-rule p-4 text-sm text-ink-muted dark:border-rule-dark dark:text-ink-muted-dark">
-            You have not submitted any reports yet.
+            {role === 'GUARDIAN'
+              ? 'No emergency reports from linked residents found.'
+              : 'You have not submitted any reports yet.'}
           </p>
         ) : filteredReports.length === 0 ? (
           <p className="rounded-control border border-dashed border-rule p-4 text-sm text-ink-muted dark:border-rule-dark dark:text-ink-muted-dark">
@@ -673,6 +675,7 @@ export const ReportPage: React.FC = () => {
                     </label>
                     <select
                       id={`report-volunteer-${report.id}`}
+                      name={`report-volunteer-${report.id}`}
                       value={volunteerSelections[report.id] ?? ''}
                       onChange={(event) => setVolunteerSelections((current) => ({
                         ...current,
@@ -707,6 +710,7 @@ export const ReportPage: React.FC = () => {
                     <label className="sr-only" htmlFor={`report-status-${report.id}`}>Update report status</label>
                     <select
                       id={`report-status-${report.id}`}
+                      name={`report-status-${report.id}`}
                       value={statusDrafts[report.id] ?? report.status}
                       onChange={(event) => setStatusDrafts((current) => ({
                         ...current,
@@ -725,6 +729,7 @@ export const ReportPage: React.FC = () => {
                     <label className="sr-only" htmlFor={`report-response-${report.id}`}>Response notes</label>
                     <input
                       id={`report-response-${report.id}`}
+                      name={`report-response-${report.id}`}
                       maxLength={2000}
                       value={responseDrafts[report.id] ?? report.response_notes ?? ''}
                       onChange={(event) => setResponseDrafts((current) => ({

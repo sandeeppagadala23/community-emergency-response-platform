@@ -7,6 +7,7 @@ from decimal import Decimal
 from rest_framework.test import APIClient
 
 from emergency_alerts.models import SOSNotification
+from emergency_contacts.models import GuardianContact
 from users.models import UserProfile
 from .models import EmergencyReport
 
@@ -786,3 +787,252 @@ class EmergencyReportAPITests(TestCase):
                     format="json",
                 )
                 self.assertEqual(response.status_code, 400)
+
+
+class GuardianEmergencyReportVisibilityTests(TestCase):
+
+    def setUp(self):
+        self.client_api = APIClient()
+
+        # Resident
+        self.resident = User.objects.create_user(
+            username="test_resident",
+            email="resident@example.com",
+            password="ResidentPassword123!",
+        )
+        UserProfile.objects.create(
+            user=self.resident,
+            role="resident",
+            phone_number="9876501111",
+            is_verified=True,
+        )
+
+        # Unrelated resident
+        self.other_resident = User.objects.create_user(
+            username="other_resident",
+            email="other_resident@example.com",
+            password="OtherResidentPassword123!",
+        )
+        UserProfile.objects.create(
+            user=self.other_resident,
+            role="resident",
+            phone_number="9876502222",
+            is_verified=True,
+        )
+
+        # Guardian linked by email
+        self.email_guardian = User.objects.create_user(
+            username="email_guardian",
+            email="email_guardian@example.com",
+            password="GuardianPassword123!",
+        )
+        UserProfile.objects.create(
+            user=self.email_guardian,
+            role="guardian",
+            phone_number="9876503333",
+            is_verified=True,
+        )
+        GuardianContact.objects.create(
+            resident=self.resident,
+            name="Email Guardian",
+            relationship="Father",
+            phone_number="9876503333",
+            email="email_guardian@example.com",
+            guardian_type="PRIMARY",
+            is_verified=True,
+        )
+
+        # Guardian linked by phone (no email on account)
+        self.phone_guardian = User.objects.create_user(
+            username="phone_guardian",
+            email="",
+            password="GuardianPassword123!",
+        )
+        UserProfile.objects.create(
+            user=self.phone_guardian,
+            role="guardian",
+            phone_number="+91 98765 04444",
+            is_verified=True,
+        )
+        GuardianContact.objects.create(
+            resident=self.resident,
+            name="Phone Guardian",
+            relationship="Brother",
+            phone_number="9876504444",
+            email="",
+            guardian_type="SECONDARY",
+            is_verified=True,
+        )
+
+        # Unlinked guardian
+        self.unlinked_guardian = User.objects.create_user(
+            username="unlinked_guardian",
+            email="unlinked@example.com",
+            password="UnlinkedPassword123!",
+        )
+        UserProfile.objects.create(
+            user=self.unlinked_guardian,
+            role="guardian",
+            phone_number="9876505555",
+            is_verified=True,
+        )
+
+    def test_guardian_can_view_linked_resident_emergency_reports_and_events(self):
+        # Resident submits report
+        self.client_api.force_authenticate(user=self.resident)
+        create_res = self.client_api.post(
+            "/reports/api/reports/",
+            {
+                "title": "Water leakage in kitchen",
+                "incident_type": "OTHER",
+                "location": "Tower B - 402",
+                "description": "Pipe burst under the sink.",
+            },
+            format="json",
+        )
+        self.assertEqual(create_res.status_code, 201)
+        report_id = create_res.data["id"]
+
+        # Other resident submits report
+        self.client_api.force_authenticate(user=self.other_resident)
+        other_res = self.client_api.post(
+            "/reports/api/reports/",
+            {
+                "title": "Unrelated issue",
+                "incident_type": "OTHER",
+                "location": "Tower A - 101",
+                "description": "Private issue of another resident.",
+            },
+            format="json",
+        )
+        self.assertEqual(other_res.status_code, 201)
+        other_report_id = other_res.data["id"]
+
+        # Email guardian verifies linked report is visible and other report is NOT
+        for guardian_user in [self.email_guardian, self.phone_guardian]:
+            with self.subTest(guardian=guardian_user.username):
+                self.client_api.force_authenticate(user=guardian_user)
+                list_res = self.client_api.get("/reports/api/reports/")
+                self.assertEqual(list_res.status_code, 200)
+                visible_ids = [r["id"] for r in list_res.data]
+                self.assertIn(report_id, visible_ids)
+                self.assertNotIn(other_report_id, visible_ids)
+
+                # Report detail access
+                detail_res = self.client_api.get(f"/reports/api/reports/{report_id}/")
+                self.assertEqual(detail_res.status_code, 200)
+                self.assertEqual(detail_res.data["title"], "Water leakage in kitchen")
+                self.assertEqual(detail_res.data["status"], "PENDING")
+
+                # Report history access
+                history_res = self.client_api.get(f"/reports/api/reports/{report_id}/history/")
+                self.assertEqual(history_res.status_code, 200)
+                self.assertTrue(len(history_res.data) >= 1)
+                self.assertEqual(history_res.data[0]["event_type"], "CREATED")
+
+                # Unrelated report detail should be 404
+                unrelated_res = self.client_api.get(f"/reports/api/reports/{other_report_id}/")
+                self.assertEqual(unrelated_res.status_code, 404)
+
+    def test_unlinked_guardian_cannot_view_unrelated_reports(self):
+        self.client_api.force_authenticate(user=self.resident)
+        create_res = self.client_api.post(
+            "/reports/api/reports/",
+            {
+                "title": "Elevator stuck",
+                "incident_type": "OTHER",
+                "location": "Tower B",
+                "description": "Elevator stuck on 3rd floor.",
+            },
+            format="json",
+        )
+        self.assertEqual(create_res.status_code, 201)
+        report_id = create_res.data["id"]
+
+        self.client_api.force_authenticate(user=self.unlinked_guardian)
+        list_res = self.client_api.get("/reports/api/reports/")
+        self.assertEqual(list_res.status_code, 200)
+        self.assertEqual(len(list_res.data), 0)
+
+        detail_res = self.client_api.get(f"/reports/api/reports/{report_id}/")
+        self.assertEqual(detail_res.status_code, 404)
+
+    def test_guardian_receives_in_app_notification_on_creation_and_status_update(self):
+        # Admin user to update status
+        admin = User.objects.create_superuser(
+            username="status_admin",
+            email="admin@example.com",
+            password="AdminPassword123!",
+        )
+
+        self.client_api.force_authenticate(user=self.resident)
+        create_res = self.client_api.post(
+            "/reports/api/reports/",
+            {
+                "title": "Smoke in corridor",
+                "incident_type": "FIRE",
+                "location": "Tower B - Corridor 4",
+                "description": "Smoke detected near apartment 402.",
+            },
+            format="json",
+        )
+        self.assertEqual(create_res.status_code, 201)
+        report_id = create_res.data["id"]
+
+        # Both email and phone guardians should have received REPORT_CREATED notification
+        for guardian_user in [self.email_guardian, self.phone_guardian]:
+            self.assertTrue(
+                SOSNotification.objects.filter(
+                    report_id=report_id,
+                    recipient=guardian_user,
+                    notification_type="REPORT_CREATED",
+                ).exists()
+            )
+
+        # Admin acknowledges report
+        self.client_api.force_authenticate(user=admin)
+        patch_res = self.client_api.patch(
+            f"/reports/api/reports/{report_id}/status/",
+            {"status": "ACKNOWLEDGED", "response_notes": "Security dispatched."},
+            format="json",
+        )
+        self.assertEqual(patch_res.status_code, 200)
+
+        # Both guardians should have received status update notification
+        for guardian_user in [self.email_guardian, self.phone_guardian]:
+            self.assertTrue(
+                SOSNotification.objects.filter(
+                    report_id=report_id,
+                    recipient=guardian_user,
+                    notification_type="REPORT_STATUS_ACKNOWLEDGED",
+                ).exists()
+            )
+
+    def test_guardian_cannot_modify_report_status_or_assign_volunteers(self):
+        self.client_api.force_authenticate(user=self.resident)
+        create_res = self.client_api.post(
+            "/reports/api/reports/",
+            {
+                "title": "Broken window",
+                "incident_type": "OTHER",
+                "location": "Tower B - 402",
+                "description": "Window crack.",
+            },
+            format="json",
+        )
+        report_id = create_res.data["id"]
+
+        self.client_api.force_authenticate(user=self.email_guardian)
+        patch_res = self.client_api.patch(
+            f"/reports/api/reports/{report_id}/status/",
+            {"status": "ACKNOWLEDGED"},
+            format="json",
+        )
+        self.assertEqual(patch_res.status_code, 403)
+
+        assign_res = self.client_api.post(
+            f"/reports/api/reports/{report_id}/assign/",
+            {"volunteer_id": 999},
+            format="json",
+        )
+        self.assertEqual(assign_res.status_code, 403)

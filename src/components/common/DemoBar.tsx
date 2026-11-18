@@ -69,7 +69,12 @@ export const DemoBar: React.FC = () => {
           {/* Language Switcher */}
           <div className="flex items-center gap-1">
             <Globe className="w-3 h-3 text-stone-400" />
+            <label htmlFor="demo-language-select" className="sr-only">
+              Select Interface Language
+            </label>
             <select
+              id="demo-language-select"
+              name="demo-language-select"
               value={language}
               onChange={(e) => setLanguage(e.target.value as Language)}
               aria-label="Select Interface Language"

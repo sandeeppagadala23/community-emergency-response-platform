@@ -11,9 +11,11 @@ from django.utils import timezone
 
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError, PermissionDenied
 from rest_framework.permissions import IsAuthenticated, BasePermission
 from rest_framework.response import Response
+
+from users.guardian import is_guardian, get_verified_guardian_links
 
 from .models import ContactVerificationOTP, EmergencyContact, GuardianContact
 from .serializers import (
@@ -68,13 +70,20 @@ class GuardianContactViewSet(viewsets.ModelViewSet):
         if user.is_staff or user.is_superuser:
             return queryset.all().order_by("id")
 
+        if is_guardian(user):
+            return get_verified_guardian_links(user)
+
         return queryset.filter(
             resident=user
         ).order_by("id")
 
     def perform_create(self, serializer):
-        # Always assign the contact to the logged-in user.
-        serializer.save(resident=self.request.user)
+        user = self.request.user
+        if not (user.is_staff or user.is_superuser):
+            profile = getattr(user, "profile", None)
+            if profile is not None and getattr(profile, "role", "").lower() != "resident":
+                raise PermissionDenied("Only residents can add emergency guardian contacts.")
+        serializer.save(resident=user)
 
     def perform_update(self, serializer):
         contact = serializer.instance

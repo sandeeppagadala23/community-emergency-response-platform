@@ -149,7 +149,12 @@ export const IncidentTable: React.FC<IncidentTableProps> = ({
           />
 
           {/* Status Filter */}
+          <label htmlFor="incident-status-filter" className="sr-only">
+            Filter by Status
+          </label>
           <select
+            id="incident-status-filter"
+            name="incident-status-filter"
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value)}
             className="border border-rule dark:border-rule-dark rounded px-2 py-1 bg-paper dark:bg-paper-dark text-ink dark:text-ink-dark focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-action"
@@ -165,7 +170,12 @@ export const IncidentTable: React.FC<IncidentTableProps> = ({
           </select>
 
           {/* Type Filter */}
+          <label htmlFor="incident-type-filter" className="sr-only">
+            Filter by Emergency Category
+          </label>
           <select
+            id="incident-type-filter"
+            name="incident-type-filter"
             value={typeFilter}
             onChange={(event) => setTypeFilter(event.target.value)}
             className="border border-rule dark:border-rule-dark rounded px-2 py-1 bg-paper dark:bg-paper-dark text-ink dark:text-ink-dark focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-action"

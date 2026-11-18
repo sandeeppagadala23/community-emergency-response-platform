@@ -349,7 +349,8 @@ class GuardianDashboardTests(TestCase):
             {"status": "RESOLVED"},
             content_type="application/json",
         )
-        self.assertEqual(response.status_code, 404)
+        # Guardians can view linked reports, but cannot change their status (403 Forbidden)
+        self.assertIn(response.status_code, [403, 404])
         report.refresh_from_db()
         self.assertEqual(report.status, "PENDING")
 

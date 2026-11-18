@@ -12,7 +12,12 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
-from users.guardian import get_user_profile
+from users.guardian import (
+    get_user_profile,
+    get_linked_resident_ids,
+    get_guardians_for_resident,
+    is_guardian,
+)
 
 from users.models import UserProfile
 from .models import EmergencyReport, EmergencyReportEvent
@@ -54,6 +59,11 @@ def reports_visible_to(user):
         return reports.filter(
             Q(reporter=user) | Q(assigned_volunteer=user)
         ).distinct()
+    if is_guardian(user):
+        linked_resident_ids = get_linked_resident_ids(user)
+        return reports.filter(
+            Q(reporter=user) | Q(reporter_id__in=linked_resident_ids)
+        ).distinct()
     return reports.filter(reporter=user)
 
 
@@ -80,11 +90,14 @@ def create_report_history(report, actor, event_type, from_status='', to_status='
 
 
 def notify_reporter_status(report, actor, new_status):
-    if report.reporter_id == actor.pk:
+    recipients = {report.reporter}
+    recipients.update(get_guardians_for_resident(report.reporter))
+    recipients.discard(actor)
+    if not recipients:
         return
     create_report_notifications(
         report,
-        [report.reporter],
+        list(recipients),
         f'REPORT_STATUS_{new_status}',
         'Report status updated',
         f'{report.title or report.get_incident_type_display()} is now {report.get_status_display()}.',
@@ -222,7 +235,9 @@ class EmergencyReportListCreateAPIView(generics.ListCreateAPIView):
         return queryset.order_by('-created_at')
 
     def perform_create(self, serializer):
-        responders = report_creation_recipients(self.request.user.pk)
+        responders = set(report_creation_recipients(self.request.user.pk))
+        responders.update(get_guardians_for_resident(self.request.user))
+        responders.discard(self.request.user)
         with transaction.atomic():
             report = serializer.save(reporter=self.request.user)
             create_report_history(
@@ -234,7 +249,7 @@ class EmergencyReportListCreateAPIView(generics.ListCreateAPIView):
             )
             create_report_notifications(
                 report,
-                responders,
+                list(responders),
                 'REPORT_CREATED',
                 'New emergency report',
                 f'{report.title} was reported at {report.location}.',

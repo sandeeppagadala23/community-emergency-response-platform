@@ -1,5 +1,6 @@
 import React, { FormEvent, useCallback, useEffect, useState } from 'react';
 import { AlertCircle, CheckCircle2, ContactRound, Pencil, Plus, Trash2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
 import { contactService } from '../services/contactService';
 import {
@@ -18,6 +19,7 @@ const emptyContact = (): GuardianContactInput => ({
 });
 
 export const GuardianContactsPage: React.FC = () => {
+  const { role } = useAuth();
   const [contacts, setContacts] = useState<GuardianContact[]>([]);
   const [form, setForm] = useState<GuardianContactInput>(emptyContact);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -164,10 +166,12 @@ export const GuardianContactsPage: React.FC = () => {
     <div className="mx-auto max-w-3xl space-y-5">
       <header className="border-b border-rule pb-3 dark:border-rule-dark">
         <h1 className="font-serif text-xl font-bold text-ink dark:text-ink-dark sm:text-2xl">
-          Emergency contacts
+          {role === 'GUARDIAN' ? 'Linked Residents & Contacts' : 'Emergency contacts'}
         </h1>
         <p className="mt-1 text-sm text-ink-muted dark:text-ink-muted-dark">
-          Manage your primary and secondary guardians. Only verified contacts are used for SOS alert routing.
+          {role === 'GUARDIAN'
+            ? 'Residents who have designated this guardian account for emergency alerts and reports.'
+            : 'Manage your primary and secondary guardians. Only verified contacts are used for SOS alert routing.'}
         </p>
       </header>
 
@@ -212,6 +216,11 @@ export const GuardianContactsPage: React.FC = () => {
                       </span>
                     </div>
                     <p className="text-sm text-ink-muted dark:text-ink-muted-dark">
+                      {role === 'GUARDIAN' && (contact.resident_name || contact.resident_username) ? (
+                        <span className="font-semibold text-ink dark:text-ink-dark">
+                          Resident: {contact.resident_name || contact.resident_username} ·{' '}
+                        </span>
+                      ) : null}
                       {contact.relationship} · {contact.phone_number}
                     </p>
                     {contact.email && (
@@ -221,36 +230,38 @@ export const GuardianContactsPage: React.FC = () => {
                       Added {formatIstTime(contact.created_at, '12h')}
                     </p>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {!contact.is_verified && (
+                  {role !== 'GUARDIAN' && (
+                    <div className="flex flex-wrap gap-2">
+                      {!contact.is_verified && (
+                        <button
+                          type="button"
+                          onClick={() => void requestOtp(contact.id)}
+                          disabled={isSendingOtp}
+                          className="rounded-control border border-action px-3 py-1.5 text-xs font-semibold text-action disabled:opacity-50 dark:text-teal-400"
+                        >
+                          {isSendingOtp && otpContactId === contact.id ? 'Requesting…' : 'Verify contact'}
+                        </button>
+                      )}
                       <button
                         type="button"
-                        onClick={() => void requestOtp(contact.id)}
-                        disabled={isSendingOtp}
-                        className="rounded-control border border-action px-3 py-1.5 text-xs font-semibold text-action disabled:opacity-50 dark:text-teal-400"
+                        onClick={() => editContact(contact)}
+                        className="inline-flex items-center gap-1 rounded-control border border-rule px-3 py-1.5 text-xs font-semibold text-ink-muted hover:border-action dark:border-rule-dark dark:text-ink-muted-dark"
                       >
-                        {isSendingOtp && otpContactId === contact.id ? 'Requesting…' : 'Verify contact'}
+                        <Pencil className="h-3.5 w-3.5" /> Edit
                       </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => editContact(contact)}
-                      className="inline-flex items-center gap-1 rounded-control border border-rule px-3 py-1.5 text-xs font-semibold text-ink-muted hover:border-action dark:border-rule-dark dark:text-ink-muted-dark"
-                    >
-                      <Pencil className="h-3.5 w-3.5" /> Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void deleteContact(contact)}
-                      disabled={deletingId === contact.id}
-                      className="inline-flex items-center gap-1 rounded-control border border-signal/30 px-3 py-1.5 text-xs font-semibold text-signal disabled:opacity-50"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      {deletingId === contact.id ? 'Removing…' : 'Remove'}
-                    </button>
-                  </div>
+                      <button
+                        type="button"
+                        onClick={() => void deleteContact(contact)}
+                        disabled={deletingId === contact.id}
+                        className="inline-flex items-center gap-1 rounded-control border border-signal/30 px-3 py-1.5 text-xs font-semibold text-signal disabled:opacity-50"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        {deletingId === contact.id ? 'Removing…' : 'Remove'}
+                      </button>
+                    </div>
+                  )}
                 </div>
-                {otpContactId === contact.id && !contact.is_verified && (
+                {role !== 'GUARDIAN' && otpContactId === contact.id && !contact.is_verified && (
                   <form
                     onSubmit={(event) => {
                       event.preventDefault();
@@ -261,6 +272,7 @@ export const GuardianContactsPage: React.FC = () => {
                     <label className="sr-only" htmlFor={`otp-${contact.id}`}>Six-digit verification code</label>
                     <input
                       id={`otp-${contact.id}`}
+                      name={`otp-${contact.id}`}
                       inputMode="numeric"
                       autoComplete="one-time-code"
                       pattern="[0-9]{6}"
@@ -286,51 +298,53 @@ export const GuardianContactsPage: React.FC = () => {
         )}
       </section>
 
-      <form onSubmit={saveContact} className="space-y-4 rounded-panel border border-rule bg-surface p-4 shadow-sm dark:border-rule-dark dark:bg-surface-dark sm:p-6">
-        <h2 className="flex items-center gap-2 font-serif text-lg font-bold text-ink dark:text-ink-dark">
-          {editingId === null ? <Plus className="h-5 w-5" /> : <Pencil className="h-4 w-4" />}
-          {editingId === null ? 'Add emergency contact' : 'Edit emergency contact'}
-        </h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block text-sm font-medium" htmlFor="contact-name">
-            Name
-            <input id="contact-name" required maxLength={150} value={form.name} onChange={(event) => updateForm('name', event.target.value)} className="mt-1.5 w-full rounded-control border border-rule bg-paper px-3 py-2.5 text-sm dark:border-rule-dark dark:bg-paper-dark" />
-          </label>
-          <label className="block text-sm font-medium" htmlFor="contact-relationship">
-            Relationship
-            <input id="contact-relationship" required maxLength={50} value={form.relationship} onChange={(event) => updateForm('relationship', event.target.value)} className="mt-1.5 w-full rounded-control border border-rule bg-paper px-3 py-2.5 text-sm dark:border-rule-dark dark:bg-paper-dark" />
-          </label>
-          <label className="block text-sm font-medium" htmlFor="contact-phone">
-            Phone number
-            <input id="contact-phone" required type="tel" maxLength={15} value={form.phone_number} onChange={(event) => updateForm('phone_number', event.target.value)} className="mt-1.5 w-full rounded-control border border-rule bg-paper px-3 py-2.5 text-sm dark:border-rule-dark dark:bg-paper-dark" />
-          </label>
-          <label className="block text-sm font-medium" htmlFor="contact-email">
-            Email <span className="font-normal text-ink-muted">(optional)</span>
-            <input id="contact-email" type="email" maxLength={254} value={form.email} onChange={(event) => updateForm('email', event.target.value)} className="mt-1.5 w-full rounded-control border border-rule bg-paper px-3 py-2.5 text-sm dark:border-rule-dark dark:bg-paper-dark" />
-          </label>
-          <label className="block text-sm font-medium" htmlFor="contact-type">
-            Contact priority
-            <select id="contact-type" value={form.guardian_type} onChange={(event) => updateForm('guardian_type', event.target.value as GuardianType)} className="mt-1.5 w-full rounded-control border border-rule bg-paper px-3 py-2.5 text-sm dark:border-rule-dark dark:bg-paper-dark">
-              <option value="PRIMARY">Primary guardian</option>
-              <option value="SECONDARY">Secondary guardian</option>
-            </select>
-          </label>
-        </div>
-        <p className="flex items-start gap-2 text-xs text-ink-muted dark:text-ink-muted-dark">
-          <ContactRound className="mt-0.5 h-4 w-4 shrink-0" />
-          Verification codes expire after 10 minutes and allow up to five attempts. Development codes are written to the Django console, not sent externally.
-        </p>
-        <div className="flex flex-col-reverse justify-end gap-2 sm:flex-row">
-          {editingId !== null && (
-            <button type="button" onClick={resetForm} className="rounded-control border border-rule px-4 py-2 text-xs font-semibold text-ink-muted dark:border-rule-dark dark:text-ink-muted-dark">
-              Cancel
+      {role !== 'GUARDIAN' && (
+        <form onSubmit={saveContact} className="space-y-4 rounded-panel border border-rule bg-surface p-4 shadow-sm dark:border-rule-dark dark:bg-surface-dark sm:p-6">
+          <h2 className="flex items-center gap-2 font-serif text-lg font-bold text-ink dark:text-ink-dark">
+            {editingId === null ? <Plus className="h-5 w-5" /> : <Pencil className="h-4 w-4" />}
+            {editingId === null ? 'Add emergency contact' : 'Edit emergency contact'}
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block text-sm font-medium" htmlFor="contact-name">
+              Name
+              <input id="contact-name" name="name" required maxLength={150} value={form.name} onChange={(event) => updateForm('name', event.target.value)} className="mt-1.5 w-full rounded-control border border-rule bg-paper px-3 py-2.5 text-sm dark:border-rule-dark dark:bg-paper-dark" />
+            </label>
+            <label className="block text-sm font-medium" htmlFor="contact-relationship">
+              Relationship
+              <input id="contact-relationship" name="relationship" required maxLength={50} value={form.relationship} onChange={(event) => updateForm('relationship', event.target.value)} className="mt-1.5 w-full rounded-control border border-rule bg-paper px-3 py-2.5 text-sm dark:border-rule-dark dark:bg-paper-dark" />
+            </label>
+            <label className="block text-sm font-medium" htmlFor="contact-phone">
+              Phone number
+              <input id="contact-phone" name="phone_number" required type="tel" maxLength={15} value={form.phone_number} onChange={(event) => updateForm('phone_number', event.target.value)} className="mt-1.5 w-full rounded-control border border-rule bg-paper px-3 py-2.5 text-sm dark:border-rule-dark dark:bg-paper-dark" />
+            </label>
+            <label className="block text-sm font-medium" htmlFor="contact-email">
+              Email <span className="font-normal text-ink-muted">(optional)</span>
+              <input id="contact-email" name="email" type="email" maxLength={254} value={form.email} onChange={(event) => updateForm('email', event.target.value)} className="mt-1.5 w-full rounded-control border border-rule bg-paper px-3 py-2.5 text-sm dark:border-rule-dark dark:bg-paper-dark" />
+            </label>
+            <label className="block text-sm font-medium" htmlFor="contact-type">
+              Contact priority
+              <select id="contact-type" name="guardian_type" value={form.guardian_type} onChange={(event) => updateForm('guardian_type', event.target.value as GuardianType)} className="mt-1.5 w-full rounded-control border border-rule bg-paper px-3 py-2.5 text-sm dark:border-rule-dark dark:bg-paper-dark">
+                <option value="PRIMARY">Primary guardian</option>
+                <option value="SECONDARY">Secondary guardian</option>
+              </select>
+            </label>
+          </div>
+          <p className="flex items-start gap-2 text-xs text-ink-muted dark:text-ink-muted-dark">
+            <ContactRound className="mt-0.5 h-4 w-4 shrink-0" />
+            Verification codes expire after 10 minutes and allow up to five attempts. Development codes are written to the Django console, not sent externally.
+          </p>
+          <div className="flex flex-col-reverse justify-end gap-2 sm:flex-row">
+            {editingId !== null && (
+              <button type="button" onClick={resetForm} className="rounded-control border border-rule px-4 py-2 text-xs font-semibold text-ink-muted dark:border-rule-dark dark:text-ink-muted-dark">
+                Cancel
+              </button>
+            )}
+            <button type="submit" disabled={isSaving} className="rounded-control bg-action px-4 py-2 text-xs font-semibold text-white disabled:opacity-50">
+              {isSaving ? 'Saving…' : editingId === null ? 'Add contact' : 'Save changes'}
             </button>
-          )}
-          <button type="submit" disabled={isSaving} className="rounded-control bg-action px-4 py-2 text-xs font-semibold text-white disabled:opacity-50">
-            {isSaving ? 'Saving…' : editingId === null ? 'Add contact' : 'Save changes'}
-          </button>
-        </div>
-      </form>
+          </div>
+        </form>
+      )}
     </div>
   );
 };

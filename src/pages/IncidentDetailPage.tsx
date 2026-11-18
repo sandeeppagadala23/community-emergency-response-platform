@@ -416,6 +416,8 @@ export const IncidentDetailPage: React.FC = () => {
                     <label className="block text-xs text-ink-muted dark:text-ink-muted-dark">
                       Start the response for an independently confirmed responder
                       <select
+                        id="arrival-responder-select"
+                        name="arrival-responder-select"
                         aria-label="Select independently confirmed responder"
                         value={selectedArrivalAssignmentId}
                         onChange={(event) => setSelectedArrivalAssignmentId(event.target.value)}
@@ -461,6 +463,8 @@ export const IncidentDetailPage: React.FC = () => {
           {isDesk && incident.status !== 'RESOLVED' && incident.status !== 'CLOSED' && (
             <div className="flex flex-col sm:flex-row gap-2">
               <select
+                id="assign-responder-select"
+                name="assign-responder-select"
                 aria-label="Choose responder"
                 value={selectedResponderId}
                 onChange={(event) => setSelectedResponderId(event.target.value)}

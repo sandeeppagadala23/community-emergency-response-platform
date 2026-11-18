@@ -20,6 +20,14 @@ class GuardianContactSerializer(serializers.ModelSerializer):
         source="get_guardian_type_display",
         read_only=True
     )
+    resident_name = serializers.SerializerMethodField(read_only=True)
+    resident_username = serializers.CharField(
+        source="resident.username",
+        read_only=True
+    )
+
+    def get_resident_name(self, obj):
+        return obj.resident.get_full_name().strip() or obj.resident.username
 
     class Meta:
         model = GuardianContact

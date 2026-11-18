@@ -3,6 +3,8 @@ export type GuardianType = 'PRIMARY' | 'SECONDARY';
 export interface GuardianContact {
   id: number;
   resident: number;
+  resident_name?: string;
+  resident_username?: string;
   name: string;
   relationship: string;
   phone_number: string;
