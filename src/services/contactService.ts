@@ -3,6 +3,7 @@ import {
   ContactOtpResponse,
   GuardianContact,
   GuardianContactInput,
+  ResidentOption,
 } from '../types/contact';
 
 const contactsEndpoint = '/api/guardian-contacts/';
@@ -48,5 +49,16 @@ export const contactService = {
         body: JSON.stringify({ code }),
       },
     );
+  },
+
+  verifyContactAdmin(id: number): Promise<{ id: number; is_verified: boolean; detail: string }> {
+    return apiClient.request<{ id: number; is_verified: boolean; detail: string }>(
+      `${contactsEndpoint}${id}/verify/`,
+      { method: 'POST' },
+    );
+  },
+
+  getResidents(): Promise<ResidentOption[]> {
+    return apiClient.request<ResidentOption[]>(`${contactsEndpoint}residents/`);
   },
 };

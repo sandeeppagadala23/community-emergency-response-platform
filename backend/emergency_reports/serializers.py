@@ -7,6 +7,7 @@ class EmergencyReportSerializer(serializers.ModelSerializer):
     title = serializers.CharField(max_length=200, allow_blank=False)
     reporter_username = serializers.CharField(source='reporter.username', read_only=True)
     reporter_name = serializers.SerializerMethodField()
+    reporter_flat = serializers.SerializerMethodField(read_only=True)
     assigned_volunteer_username = serializers.CharField(
         source='assigned_volunteer.username',
         read_only=True,
@@ -31,6 +32,15 @@ class EmergencyReportSerializer(serializers.ModelSerializer):
     def get_reporter_name(self, report):
         return report.reporter.get_full_name().strip() or report.reporter.username
 
+    def get_reporter_flat(self, report):
+        try:
+            flats = list(report.reporter.flats.select_related('block').all())
+            if flats:
+                return ', '.join(f'{f.block.name}-{f.flat_number}' for f in flats)
+        except Exception:
+            pass
+        return None
+
     def get_assigned_volunteer_name(self, report):
         if report.assigned_volunteer is None:
             return None
@@ -47,6 +57,7 @@ class EmergencyReportSerializer(serializers.ModelSerializer):
             'reporter',
             'reporter_username',
             'reporter_name',
+            'reporter_flat',
             'responded_by',
             'responded_by_username',
             'assigned_volunteer',

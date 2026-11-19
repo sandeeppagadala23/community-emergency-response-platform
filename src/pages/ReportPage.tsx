@@ -332,10 +332,12 @@ export const ReportPage: React.FC = () => {
       <header className="flex flex-col gap-3 border-b border-rule pb-3 dark:border-rule-dark sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-serif text-xl font-bold text-ink dark:text-ink-dark sm:text-2xl">
-            Raise a Complaint / Report Emergency
+            {role === 'GUARDIAN' ? 'Resident Reports' : 'Raise a Complaint / Report Emergency'}
           </h1>
           <p className="mt-1 text-sm text-ink-muted dark:text-ink-muted-dark">
-            Submit a written report for the response team. For an immediate emergency, use SOS.
+            {role === 'GUARDIAN'
+              ? 'View and monitor emergency reports submitted by your verified linked residents.'
+              : 'Submit a written report for the response team. For an immediate emergency, use SOS.'}
           </p>
         </div>
         {role === 'RESIDENT' ? (
@@ -379,6 +381,7 @@ export const ReportPage: React.FC = () => {
         </p>
       )}
 
+      {role !== 'GUARDIAN' && (
       <form
         onSubmit={handleSubmit}
         className="space-y-4 rounded-panel border border-rule bg-surface p-4 shadow-sm dark:border-rule-dark dark:bg-surface-dark sm:p-6"
@@ -496,11 +499,12 @@ export const ReportPage: React.FC = () => {
           </button>
         </div>
       </form>
+      )}
 
       <section aria-labelledby="submitted-reports-heading" className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 id="submitted-reports-heading" className="font-serif text-lg font-bold text-ink dark:text-ink-dark">
-            Reports you can access
+            {role === 'GUARDIAN' ? 'Reports from linked residents' : 'Reports you can access'}
           </h2>
           {!isDemo && (
             <button
@@ -613,11 +617,13 @@ export const ReportPage: React.FC = () => {
                 <p className="text-xs text-ink-muted dark:text-ink-muted-dark">
                   {report.location} · {formatIstTime(report.created_at, '12h')}
                 </p>
-                {(report.reporter_name || report.assigned_volunteer_name) && (
+                {(report.reporter_name || report.reporter_username || report.assigned_volunteer_name) && (
                   <p className="text-xs text-ink-muted dark:text-ink-muted-dark">
-                    {report.reporter_name ? `Reported by ${report.reporter_name}` : ''}
+                    <span className="font-semibold text-ink dark:text-ink-dark">
+                      Resident: {report.reporter_name || report.reporter_username}
+                    </span>
                     {report.assigned_volunteer_name
-                      ? `${report.reporter_name ? ' · ' : ''}Assigned to ${report.assigned_volunteer_name}`
+                      ? ` · Assigned to ${report.assigned_volunteer_name}`
                       : ' · Not assigned'}
                   </p>
                 )}
@@ -627,6 +633,9 @@ export const ReportPage: React.FC = () => {
                   </p>
                 )}
                 <p className="whitespace-pre-wrap text-sm text-ink dark:text-ink-dark">{report.description}</p>
+                <p className="text-xs text-ink-muted dark:text-ink-muted-dark">
+                  Attachments: {report.response_notes ? 'Response notes available' : 'None'}
+                </p>
                 <p className="text-xs text-ink-muted dark:text-ink-muted-dark">
                   Updated {formatIstTime(report.updated_at, '12h')}
                   {report.responded_by_username ? ` · Response by ${report.responded_by_username}` : ''}

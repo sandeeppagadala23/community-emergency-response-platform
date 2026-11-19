@@ -105,7 +105,12 @@ def notify_reporter_status(report, actor, new_status):
 
 
 def is_admin(user):
-    return user.is_staff or user.is_superuser
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_staff or user.is_superuser:
+        return True
+    profile = get_user_profile(user)
+    return profile is not None and getattr(profile, 'role', '').lower() == 'admin'
 
 
 def available_volunteer_profiles(report=None):
@@ -263,6 +268,13 @@ class EmergencyReportDetailAPIView(generics.RetrieveUpdateAPIView):
 
     def get_queryset(self):
         return reports_visible_to(self.request.user)
+
+    def perform_update(self, serializer):
+        user = self.request.user
+        report = serializer.instance
+        if not (user.is_staff or user.is_superuser or report.reporter_id == user.pk):
+            raise PermissionDenied("You do not have permission to edit this report.")
+        serializer.save()
 
 
 class EmergencyReportStatusUpdateAPIView(generics.UpdateAPIView):

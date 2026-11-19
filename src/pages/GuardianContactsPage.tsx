@@ -1,5 +1,5 @@
 import React, { FormEvent, useCallback, useEffect, useState } from 'react';
-import { AlertCircle, CheckCircle2, ContactRound, Pencil, Plus, Trash2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, ContactRound, Pencil, Plus, ShieldCheck, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
 import { contactService } from '../services/contactService';
@@ -7,10 +7,12 @@ import {
   GuardianContact,
   GuardianContactInput,
   GuardianType,
+  ResidentOption,
 } from '../types/contact';
 import { formatIstTime } from '../utils/dateUtils';
 
 const emptyContact = (): GuardianContactInput => ({
+  resident: undefined,
   name: '',
   relationship: '',
   phone_number: '',
@@ -21,6 +23,7 @@ const emptyContact = (): GuardianContactInput => ({
 export const GuardianContactsPage: React.FC = () => {
   const { role } = useAuth();
   const [contacts, setContacts] = useState<GuardianContact[]>([]);
+  const [residents, setResidents] = useState<ResidentOption[]>([]);
   const [form, setForm] = useState<GuardianContactInput>(emptyContact);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [otpContactId, setOtpContactId] = useState<number | null>(null);
@@ -29,6 +32,7 @@ export const GuardianContactsPage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isVerifyingAdmin, setIsVerifyingAdmin] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -60,10 +64,34 @@ export const GuardianContactsPage: React.FC = () => {
       }
     };
     void fetchContacts();
+
+    if (role === 'ADMIN') {
+      contactService.getResidents()
+        .then((resList) => {
+          if (active) setResidents(resList);
+        })
+        .catch(() => {});
+    }
+
     return () => {
       active = false;
     };
-  }, []);
+  }, [role]);
+
+  const verifyContactAdmin = async (contactId: number) => {
+    setIsVerifyingAdmin(contactId);
+    setError(null);
+    setMessage(null);
+    try {
+      await contactService.verifyContactAdmin(contactId);
+      setMessage('Guardian contact verified successfully.');
+      await loadContacts();
+    } catch (adminError: unknown) {
+      setError(apiClient.normalizeError(adminError).message);
+    } finally {
+      setIsVerifyingAdmin(null);
+    }
+  };
 
   const resetForm = () => {
     setForm(emptyContact());
@@ -198,7 +226,9 @@ export const GuardianContactsPage: React.FC = () => {
           </p>
         ) : contacts.length === 0 ? (
           <p className="rounded-control border border-dashed border-rule p-4 text-sm text-ink-muted dark:border-rule-dark dark:text-ink-muted-dark">
-            No emergency contacts yet.
+            {role === 'GUARDIAN'
+              ? 'No verified residents are linked to your account yet. Emergency alerts and reports will appear here once an administrator or resident links and verifies your guardian contact.'
+              : 'No emergency contacts yet.'}
           </p>
         ) : (
           <ul className="space-y-3">
@@ -216,9 +246,10 @@ export const GuardianContactsPage: React.FC = () => {
                       </span>
                     </div>
                     <p className="text-sm text-ink-muted dark:text-ink-muted-dark">
-                      {role === 'GUARDIAN' && (contact.resident_name || contact.resident_username) ? (
+                      {(role === 'GUARDIAN' || role === 'ADMIN') && (contact.resident_name || contact.resident_username) ? (
                         <span className="font-semibold text-ink dark:text-ink-dark">
-                          Resident: {contact.resident_name || contact.resident_username} ·{' '}
+                          Resident: {contact.resident_name || contact.resident_username}
+                          {contact.resident_flat ? ` (Flat ${contact.resident_flat})` : ''} ·{' '}
                         </span>
                       ) : null}
                       {contact.relationship} · {contact.phone_number}
@@ -233,14 +264,26 @@ export const GuardianContactsPage: React.FC = () => {
                   {role !== 'GUARDIAN' && (
                     <div className="flex flex-wrap gap-2">
                       {!contact.is_verified && (
-                        <button
-                          type="button"
-                          onClick={() => void requestOtp(contact.id)}
-                          disabled={isSendingOtp}
-                          className="rounded-control border border-action px-3 py-1.5 text-xs font-semibold text-action disabled:opacity-50 dark:text-teal-400"
-                        >
-                          {isSendingOtp && otpContactId === contact.id ? 'Requesting…' : 'Verify contact'}
-                        </button>
+                        role === 'ADMIN' ? (
+                          <button
+                            type="button"
+                            onClick={() => void verifyContactAdmin(contact.id)}
+                            disabled={isVerifyingAdmin === contact.id}
+                            className="inline-flex items-center gap-1 rounded-control bg-action px-3 py-1.5 text-xs font-semibold text-white hover:bg-action-hover disabled:opacity-50"
+                          >
+                            <ShieldCheck className="h-3.5 w-3.5" />
+                            {isVerifyingAdmin === contact.id ? 'Verifying…' : 'Verify Guardian'}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => void requestOtp(contact.id)}
+                            disabled={isSendingOtp}
+                            className="rounded-control border border-action px-3 py-1.5 text-xs font-semibold text-action disabled:opacity-50 dark:text-teal-400"
+                          >
+                            {isSendingOtp && otpContactId === contact.id ? 'Requesting…' : 'Verify contact'}
+                          </button>
+                        )
                       )}
                       <button
                         type="button"
@@ -305,6 +348,28 @@ export const GuardianContactsPage: React.FC = () => {
             {editingId === null ? 'Add emergency contact' : 'Edit emergency contact'}
           </h2>
           <div className="grid gap-4 sm:grid-cols-2">
+            {role === 'ADMIN' && (
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium" htmlFor="contact-resident">
+                  Assign to Resident <span aria-hidden="true">*</span>
+                  <select
+                    id="contact-resident"
+                    name="resident"
+                    required
+                    value={form.resident ?? ''}
+                    onChange={(event) => updateForm('resident', Number(event.target.value) || undefined)}
+                    className="mt-1.5 w-full rounded-control border border-rule bg-paper px-3 py-2.5 text-sm dark:border-rule-dark dark:bg-paper-dark"
+                  >
+                    <option value="">Select a resident to link</option>
+                    {residents.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name} ({r.username}){r.flat ? ` · Flat ${r.flat}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            )}
             <label className="block text-sm font-medium" htmlFor="contact-name">
               Name
               <input id="contact-name" name="name" required maxLength={150} value={form.name} onChange={(event) => updateForm('name', event.target.value)} className="mt-1.5 w-full rounded-control border border-rule bg-paper px-3 py-2.5 text-sm dark:border-rule-dark dark:bg-paper-dark" />

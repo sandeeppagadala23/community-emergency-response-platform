@@ -312,6 +312,7 @@ LOGGING = {
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
+            "level": "DEBUG" if DEBUG else "WARNING",
         },
     },
     "loggers": {
@@ -319,6 +320,11 @@ LOGGING = {
             "handlers": ["console"],
             "level": "DEBUG" if DEBUG else "WARNING",
             "propagate": True,
+        },
+        "emergency_contacts.views": {
+            "handlers": ["console"],
+            "level": "INFO" if DEBUG else "WARNING",
+            "propagate": False,
         },
     },
 }

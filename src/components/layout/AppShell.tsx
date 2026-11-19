@@ -98,7 +98,13 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
               </div>
               <p className="text-[11px] text-ink-muted dark:text-ink-muted-dark leading-none mt-0.5">
                 {user
-                  ? `${user.name} · ${role === 'VOLUNTEER' && user.flat === 'Not assigned' ? 'Volunteer' : user.flat}`
+                  ? `${user.name} · ${
+                      role === 'VOLUNTEER' && user.flat === 'Not assigned'
+                        ? 'Volunteer'
+                        : role === 'GUARDIAN'
+                          ? 'Guardian'
+                          : user.flat
+                    }`
                   : 'Emergency Dispatch'}
               </p>
             </div>
@@ -112,7 +118,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                 className="hidden items-center gap-1.5 rounded-control border border-rule px-2 py-1 text-xs font-semibold text-ink-muted hover:border-action hover:text-action dark:border-rule-dark dark:text-ink-muted-dark md:inline-flex"
               >
                 <ContactRound className="h-4 w-4" />
-                <span>Contacts</span>
+                <span>{role === 'GUARDIAN' ? 'My Residents' : 'Contacts'}</span>
               </NavLink>
             )}
             {role && (
@@ -180,7 +186,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
               }
             >
               <FilePlus2 className="w-4 h-4" strokeWidth={1.75} />
-              <span>Report an Issue</span>
+              <span>{role === 'GUARDIAN' ? 'Resident Reports' : 'Report an Issue'}</span>
             </NavLink>
 
             <NavLink
@@ -190,7 +196,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
               }
             >
               <ContactRound className="w-4 h-4" strokeWidth={1.75} />
-              <span>Emergency Contacts</span>
+              <span>{role === 'GUARDIAN' ? 'My Residents' : 'Emergency Contacts'}</span>
             </NavLink>
 
             <NavLink
@@ -352,7 +358,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
               }
             >
               <FilePlus2 className="w-5 h-5 mb-0.5" strokeWidth={1.75} />
-              <span>Report</span>
+              <span>{role === 'GUARDIAN' ? 'Reports' : 'Report'}</span>
             </NavLink>
 
             <NavLink
@@ -404,7 +410,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
               }
             >
               <ContactRound className="mb-0.5 h-5 w-5" strokeWidth={1.75} />
-              <span>Contacts</span>
+              <span>{role === 'GUARDIAN' ? 'Residents' : 'Contacts'}</span>
             </NavLink>
           </>
         )}

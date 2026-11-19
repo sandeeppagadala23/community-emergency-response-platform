@@ -5,6 +5,7 @@ export interface GuardianContact {
   resident: number;
   resident_name?: string;
   resident_username?: string;
+  resident_flat?: string | null;
   name: string;
   relationship: string;
   phone_number: string;
@@ -16,11 +17,21 @@ export interface GuardianContact {
 }
 
 export interface GuardianContactInput {
+  resident?: number;
   name: string;
   relationship: string;
   phone_number: string;
   email: string;
   guardian_type: GuardianType;
+}
+
+export interface ResidentOption {
+  id: number;
+  username: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  flat?: string;
 }
 
 export interface ContactOtpResponse {

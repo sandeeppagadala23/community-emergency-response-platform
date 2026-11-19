@@ -14,6 +14,7 @@ export interface EmergencyReport {
   reporter?: number;
   reporter_username?: string;
   reporter_name?: string;
+  reporter_flat?: string | null;
   responded_by: number | null;
   responded_by_username: string | null;
   assigned_volunteer: number | null;

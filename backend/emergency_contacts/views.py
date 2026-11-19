@@ -9,13 +9,14 @@ from django.core.mail import send_mail
 from django.db import transaction
 from django.utils import timezone
 
+from django.db.models import Q
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError, PermissionDenied
 from rest_framework.permissions import IsAuthenticated, BasePermission
 from rest_framework.response import Response
 
-from users.guardian import is_guardian, get_verified_guardian_links
+from users.guardian import is_guardian, is_admin, get_verified_guardian_links
 
 from .models import ContactVerificationOTP, EmergencyContact, GuardianContact
 from .serializers import (
@@ -67,7 +68,7 @@ class GuardianContactViewSet(viewsets.ModelViewSet):
             "resident"
         )
 
-        if user.is_staff or user.is_superuser:
+        if is_admin(user):
             return queryset.all().order_by("id")
 
         if is_guardian(user):
@@ -79,13 +80,37 @@ class GuardianContactViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        if not (user.is_staff or user.is_superuser):
+        if is_admin(user):
+            resident = serializer.validated_data.get("resident")
+            if not resident:
+                resident_id = self.request.data.get("resident") or self.request.data.get("resident_id")
+                if resident_id:
+                    from django.contrib.auth import get_user_model
+                    from django.shortcuts import get_object_or_404
+                    User = get_user_model()
+                    resident = get_object_or_404(User, pk=resident_id)
+            if not resident:
+                resident = user
+            raw_verified = self.request.data.get("is_verified")
+            if raw_verified is None:
+                is_verified = True
+            elif isinstance(raw_verified, str):
+                is_verified = raw_verified.lower() in ("true", "1", "yes")
+            else:
+                is_verified = bool(raw_verified)
+            serializer.save(resident=resident, is_verified=is_verified)
+        else:
             profile = getattr(user, "profile", None)
             if profile is not None and getattr(profile, "role", "").lower() != "resident":
                 raise PermissionDenied("Only residents can add emergency guardian contacts.")
-        serializer.save(resident=user)
+            serializer.save(resident=user, is_verified=False)
 
     def perform_update(self, serializer):
+        user = self.request.user
+        if is_admin(user):
+            serializer.save()
+            return
+
         contact = serializer.instance
         email = serializer.validated_data.get("email", contact.email)
         phone_number = serializer.validated_data.get(
@@ -235,19 +260,14 @@ class GuardianContactViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], url_path="verify")
     def verify(self, request, pk=None):
         """
-        Allow only staff users or superusers to verify a guardian.
+        Allow administrators to verify a guardian contact.
         """
-        if not (
-            request.user.is_staff
-            or request.user.is_superuser
-        ):
+        if not is_admin(request.user):
             return Response(
                 {
-                    "detail": (
-                        "Only administrators can verify guardians."
-                    )
+                    "detail": "Only administrators can verify guardians."
                 },
-                status=status.HTTP_403_FORBIDDEN
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         guardian = self.get_object()
@@ -256,11 +276,39 @@ class GuardianContactViewSet(viewsets.ModelViewSet):
 
         return Response(
             {
-                "detail": (
-                    "Guardian contact verified successfully."
-                ),
+                "detail": "Guardian contact verified successfully.",
                 "id": guardian.id,
                 "is_verified": guardian.is_verified,
             },
-            status=status.HTTP_200_OK
+            status=status.HTTP_200_OK,
         )
+
+    @action(detail=False, methods=["get"], url_path="residents")
+    def residents(self, request):
+        """
+        Allow administrators to list residents for assigning guardian contacts.
+        """
+        if not is_admin(request.user):
+            raise PermissionDenied("Only administrators can view the resident list.")
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        residents = (
+            User.objects.filter(is_active=True)
+            .filter(Q(profile__role__iexact="resident") | Q(profile__isnull=True))
+            .select_related("profile")
+            .prefetch_related("flats", "flats__block")
+            .order_by("username")
+        )
+        data = []
+        for u in residents:
+            flats = list(u.flats.select_related("block").all())
+            flat_str = ", ".join(f"{f.block.name}-{f.flat_number}" for f in flats) if flats else ""
+            data.append({
+                "id": u.id,
+                "username": u.username,
+                "name": u.get_full_name().strip() or u.username,
+                "email": u.email,
+                "phone": getattr(getattr(u, "profile", None), "phone_number", ""),
+                "flat": flat_str,
+            })
+        return Response(data, status=status.HTTP_200_OK)

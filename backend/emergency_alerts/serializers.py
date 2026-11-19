@@ -13,8 +13,22 @@ class SOSAlertSerializer(serializers.ModelSerializer):
         source="reporter.username",
         read_only=True,
     )
+    resident_name = serializers.SerializerMethodField(read_only=True)
+    resident_flat = serializers.SerializerMethodField(read_only=True)
     acknowledged_by_name = serializers.SerializerMethodField()
     resolved_by_name = serializers.SerializerMethodField()
+
+    def get_resident_name(self, alert):
+        return alert.reporter.get_full_name().strip() or alert.reporter.username
+
+    def get_resident_flat(self, alert):
+        try:
+            flats = list(alert.reporter.flats.select_related('block').all())
+            if flats:
+                return ', '.join(f'{f.block.name}-{f.flat_number}' for f in flats)
+        except Exception:
+            pass
+        return None
 
     def get_acknowledged_by_name(self, alert):
         if alert.acknowledged_by is None:
@@ -47,6 +61,8 @@ class SOSAlertSerializer(serializers.ModelSerializer):
             "id",
             "reporter",
             "reporter_username",
+            "resident_name",
+            "resident_flat",
             "acknowledged_by_name",
             "resolved_by_name",
             "category",

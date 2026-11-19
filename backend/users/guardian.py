@@ -46,6 +46,15 @@ def is_guardian(user):
     return profile is not None and getattr(profile, "role", "").lower() == "guardian"
 
 
+def is_admin(user):
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_staff or user.is_superuser:
+        return True
+    profile = get_user_profile(user)
+    return profile is not None and getattr(profile, "role", "").lower() == "admin"
+
+
 def get_verified_guardian_links(user):
     """
     Return the verified GuardianContact rows that link this guardian
