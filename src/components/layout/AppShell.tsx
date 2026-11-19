@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   LogOut,
   Shield,
+  ShieldCheck,
   FilePlus2,
   ContactRound,
 } from 'lucide-react';
@@ -103,7 +104,9 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                         ? 'Volunteer'
                         : role === 'GUARDIAN'
                           ? 'Guardian'
-                          : user.flat
+                          : role === 'SECURITY'
+                            ? `Security${(user as unknown as { employee_id?: string }).employee_id ? ` · ${(user as unknown as { employee_id?: string }).employee_id}` : ''}`
+                            : user.flat
                     }`
                   : 'Emergency Dispatch'}
               </p>
@@ -154,6 +157,16 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
               >
                 <AlertTriangle className="w-4 h-4" strokeWidth={1.75} />
                 <span>Raise Emergency</span>
+              </NavLink>
+            ) : role === 'SECURITY' ? (
+              <NavLink
+                to="/security"
+                className={({ isActive }) =>
+                  `flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-control transition-colors ${isActive ? 'bg-action text-white' : ''}`
+                }
+              >
+                <ShieldCheck className="w-4 h-4" strokeWidth={1.75} />
+                <span>Security Dashboard</span>
               </NavLink>
             ) : (
               <NavLink
@@ -333,19 +346,35 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
         ) : (
           <>
             {/* Mobile Nav for Non-Residents */}
-            <NavLink
-              to="/incidents"
-              className={({ isActive }) =>
-                `flex min-h-[48px] flex-col items-center justify-center py-1 px-4 text-xs font-semibold transition-colors ${
-                  isActive
-                    ? 'text-action dark:text-teal-400'
-                    : 'text-ink-muted dark:text-ink-muted-dark'
-                }`
-              }
-            >
-              <LayoutDashboard className="w-5 h-5 mb-0.5" strokeWidth={1.75} />
-              <span>Incidents</span>
-            </NavLink>
+            {role === 'SECURITY' ? (
+              <NavLink
+                to="/security"
+                className={({ isActive }) =>
+                  `flex min-h-[48px] flex-col items-center justify-center py-1 px-4 text-xs font-semibold transition-colors ${
+                    isActive
+                      ? 'text-action dark:text-teal-400'
+                      : 'text-ink-muted dark:text-ink-muted-dark'
+                  }`
+                }
+              >
+                <ShieldCheck className="w-5 h-5 mb-0.5" strokeWidth={1.75} />
+                <span>Dashboard</span>
+              </NavLink>
+            ) : (
+              <NavLink
+                to="/incidents"
+                className={({ isActive }) =>
+                  `flex min-h-[48px] flex-col items-center justify-center py-1 px-4 text-xs font-semibold transition-colors ${
+                    isActive
+                      ? 'text-action dark:text-teal-400'
+                      : 'text-ink-muted dark:text-ink-muted-dark'
+                  }`
+                }
+              >
+                <LayoutDashboard className="w-5 h-5 mb-0.5" strokeWidth={1.75} />
+                <span>Incidents</span>
+              </NavLink>
+            )}
 
             <NavLink
               to="/reports"

@@ -28,6 +28,29 @@ class UserProfile(models.Model):
         unique=True
     )
 
+    employee_id = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        help_text="Security or Staff Employee ID (e.g. SEC-001)"
+    )
+
+    shift = models.CharField(
+        max_length=50,
+        blank=True,
+        default="Day Shift",
+        help_text="Assigned duty shift (e.g. Day Shift, Night Shift)"
+    )
+
+    society = models.ForeignKey(
+        'society.Society',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='staff_profiles',
+        help_text="Assigned society/community for staff and security personnel"
+    )
+
     is_verified = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)

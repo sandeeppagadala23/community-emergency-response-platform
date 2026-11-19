@@ -35,7 +35,7 @@ def _error(code, message, status):
 
 
 def _user_data(user):
-    profile = UserProfile.objects.filter(user=user).first()
+    profile = UserProfile.objects.select_related('society').filter(user=user).first()
     flats = list(
         user.flats.select_related('block', 'block__society').order_by(
             'block__name',
@@ -47,6 +47,8 @@ def _user_data(user):
         for assignment in flats
     ) or 'Not assigned'
     societies = sorted({assignment.block.society.name for assignment in flats})
+    if not societies and profile and profile.society:
+        societies = [profile.society.name]
     role = 'ADMIN' if user.is_staff or user.is_superuser else (
         profile.role.upper() if profile else 'RESIDENT'
     )
@@ -56,8 +58,12 @@ def _user_data(user):
         'role': role,
         'flat': flat,
         'society': ', '.join(societies) or 'Not assigned',
+        'society_id': profile.society_id if profile and profile.society_id else None,
+        'employee_id': profile.employee_id if profile and profile.employee_id else None,
+        'shift': profile.shift if profile and profile.shift else None,
         'phone': profile.phone_number if profile else '',
         'email': user.email,
+        'is_active': user.is_active,
         'is_verified': (
             user.is_staff
             or user.is_superuser

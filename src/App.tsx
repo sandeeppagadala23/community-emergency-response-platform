@@ -22,6 +22,7 @@ const NotificationLogPage = lazy(() => import('./pages/NotificationLogPage').the
 const NotificationsInboxPage = lazy(() => import('./pages/NotificationsInboxPage').then((m) => ({ default: m.NotificationsInboxPage })));
 const NotificationDetailPage = lazy(() => import('./pages/NotificationDetailPage').then((m) => ({ default: m.NotificationDetailPage })));
 const DesignSystemPage = lazy(() => import('./pages/DesignSystemPage').then((m) => ({ default: m.DesignSystemPage })));
+const SecurityDashboardPage = lazy(() => import('./pages/SecurityDashboardPage').then((m) => ({ default: m.SecurityDashboardPage })));
 
 const RouteLoadingFallback: React.FC = () => (
   <div className="p-8 text-center text-xs text-ink-muted">Loading...</div>
@@ -42,8 +43,8 @@ const ProtectedRoute: React.FC<{
     return (
       <AppShell>
         <PermissionDenied
-          backTo={role === 'RESIDENT' ? '/sos' : '/incidents'}
-          backLabel={role === 'RESIDENT' ? 'Return to SOS' : 'Return to incident board'}
+          backTo={role === 'RESIDENT' ? '/sos' : role === 'SECURITY' ? '/security' : '/incidents'}
+          backLabel={role === 'RESIDENT' ? 'Return to SOS' : role === 'SECURITY' ? 'Return to dashboard' : 'Return to incident board'}
         />
       </AppShell>
     );
@@ -61,6 +62,9 @@ const RoleRedirect: React.FC = () => {
   if (role === 'RESIDENT') {
     return <Navigate to="/sos" replace />;
   }
+  if (role === 'SECURITY') {
+    return <Navigate to="/security" replace />;
+  }
 
   return <Navigate to="/incidents" replace />;
 };
@@ -70,7 +74,7 @@ const LoginRoute: React.FC = () => {
 
   if (isLoading) return <div className="p-8 text-center">Checking your session...</div>;
   if (user) {
-    return <Navigate to={role === 'RESIDENT' ? '/sos' : '/incidents'} replace />;
+    return <Navigate to={role === 'RESIDENT' ? '/sos' : role === 'SECURITY' ? '/security' : '/incidents'} replace />;
   }
   return <LoginPage />;
 };
@@ -185,6 +189,16 @@ export const App: React.FC = () => {
                 element={
                   <ProtectedRoute>
                     <NotificationDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Security Guard Dashboard */}
+              <Route
+                path="/security"
+                element={
+                  <ProtectedRoute allowedRoles={['SECURITY', 'ADMIN']}>
+                    <SecurityDashboardPage />
                   </ProtectedRoute>
                 }
               />
