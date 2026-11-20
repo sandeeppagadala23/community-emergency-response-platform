@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { securityService } from '../services/securityService';
 import { incidentService } from '../services/incidentService';
 import { SecurityDashboardData } from '../types/security';
+import { ErrorBoundary } from '../components/common/ErrorBoundary';
 import {
   ShieldCheck,
   AlertTriangle,
@@ -20,9 +21,12 @@ import {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function fmtDate(iso: string): string {
+function fmtDate(iso?: string | null): string {
+  if (!iso) return 'Not Available';
   try {
-    return new Date(iso).toLocaleString('en-IN', {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return 'Not Available';
+    return d.toLocaleString('en-IN', {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
@@ -30,12 +34,13 @@ function fmtDate(iso: string): string {
       minute: '2-digit',
     });
   } catch {
-    return iso;
+    return 'Not Available';
   }
 }
 
-function statusColor(status: string): string {
-  switch (status.toUpperCase()) {
+function statusColor(status?: string | null): string {
+  const norm = String(status || '').trim().toUpperCase();
+  switch (norm) {
     case 'PENDING':
       return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300';
     case 'ACKNOWLEDGED':
@@ -52,8 +57,9 @@ function statusColor(status: string): string {
   }
 }
 
-function etColor(type: string): string {
-  switch (type.toUpperCase()) {
+function etColor(type?: string | null): string {
+  const norm = String(type || '').trim().toUpperCase();
+  switch (norm) {
     case 'MEDICAL':
     case 'FALL':
       return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
@@ -75,7 +81,7 @@ function etColor(type: string): string {
 interface MetricCardProps {
   label: string;
   value: number;
-  accent: string; // Tailwind border-l colour class
+  accent: string;
   icon: React.ReactNode;
 }
 
@@ -85,17 +91,17 @@ const MetricCard: React.FC<MetricCardProps> = ({ label, value, accent, icon }) =
   >
     <div className="text-ink-muted dark:text-ink-muted-dark mt-0.5 shrink-0">{icon}</div>
     <div>
-      <p className="text-2xl font-bold tabular-nums text-ink dark:text-ink-dark">{value}</p>
+      <p className="text-2xl font-bold tabular-nums text-ink dark:text-ink-dark">{value ?? 0}</p>
       <p className="text-xs text-ink-muted dark:text-ink-muted-dark mt-0.5">{label}</p>
     </div>
   </div>
 );
 
 // ---------------------------------------------------------------------------
-// Main page
+// Main page view
 // ---------------------------------------------------------------------------
 
-export const SecurityDashboardPage: React.FC = () => {
+const SecurityDashboardView: React.FC = () => {
   const [data, setData] = useState<SecurityDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -181,13 +187,18 @@ export const SecurityDashboardPage: React.FC = () => {
     );
   }
 
-  if (error) {
+  if (error || !data) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
         <XCircle className="w-10 h-10 text-signal" />
-        <p className="text-sm text-ink-muted dark:text-ink-muted-dark max-w-xs">{error}</p>
+        <p className="text-sm text-ink-muted dark:text-ink-muted-dark max-w-xs">
+          {error || 'Unable to display dashboard.'}
+        </p>
         <button
-          onClick={() => { setLoading(true); void loadDashboard(); }}
+          onClick={() => {
+            setLoading(true);
+            void loadDashboard();
+          }}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-control bg-action text-white text-sm font-semibold hover:bg-action/90 transition-colors"
         >
           <RefreshCw className="w-4 h-4" />
@@ -197,7 +208,18 @@ export const SecurityDashboardPage: React.FC = () => {
     );
   }
 
-  const { metrics, live_alerts, recent_reports } = data!;
+  const metrics = data.metrics || {
+    total_active: 0,
+    new_sos: 0,
+    acknowledged: 0,
+    in_progress: 0,
+    resolved: 0,
+    cancelled: 0,
+    assigned_to_me: 0,
+    active_reports: 0,
+  };
+  const live_alerts = Array.isArray(data.live_alerts) ? data.live_alerts : [];
+  const recent_reports = Array.isArray(data.recent_reports) ? data.recent_reports : [];
 
   // -------------------------------------------------------------------------
   // Render
@@ -220,7 +242,10 @@ export const SecurityDashboardPage: React.FC = () => {
           </p>
         </div>
         <button
-          onClick={() => { setLoading(true); void loadDashboard(); }}
+          onClick={() => {
+            setLoading(true);
+            void loadDashboard();
+          }}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-control border border-rule dark:border-rule-dark text-xs font-semibold text-ink-muted dark:text-ink-muted-dark hover:border-action hover:text-action transition-colors"
         >
           <RefreshCw className="w-3.5 h-3.5" />
@@ -310,6 +335,11 @@ export const SecurityDashboardPage: React.FC = () => {
             {live_alerts.map((alert) => {
               const isAcking = actionLoading === `ack-${alert.id}`;
               const isResolving = actionLoading === `resolve-${alert.id}`;
+              const alertCategory = alert.emergency_type || alert.category || 'OTHER';
+              const alertStatus = alert.status || 'PENDING';
+              const alertStatusDisplay = alert.status_display || alertStatus;
+              const alertDescription = alert.description || alert.message || '';
+
               return (
                 <div
                   key={alert.id}
@@ -321,14 +351,14 @@ export const SecurityDashboardPage: React.FC = () => {
                         #{alert.id}
                       </span>
                       <span
-                        className={`text-[11px] font-semibold px-2 py-0.5 rounded ${etColor(alert.emergency_type)}`}
+                        className={`text-[11px] font-semibold px-2 py-0.5 rounded ${etColor(alertCategory)}`}
                       >
-                        {alert.emergency_type}
+                        {alertCategory}
                       </span>
                       <span
-                        className={`text-[11px] font-semibold px-2 py-0.5 rounded ${statusColor(alert.status)}`}
+                        className={`text-[11px] font-semibold px-2 py-0.5 rounded ${statusColor(alertStatus)}`}
                       >
-                        {alert.status_display || alert.status}
+                        {alertStatusDisplay}
                       </span>
                       {alert.assigned_to_me && (
                         <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300">
@@ -342,21 +372,25 @@ export const SecurityDashboardPage: React.FC = () => {
                   </div>
 
                   <p className="mt-2 text-sm font-semibold text-ink dark:text-ink-dark">
-                    {alert.resident_name || 'Unknown Resident'}
+                    {alert.resident_name || 'Resident'}
                   </p>
-                  {alert.description && (
+                  {alertDescription ? (
                     <p className="text-sm text-ink-muted dark:text-ink-muted-dark mt-1 line-clamp-2">
-                      {alert.description}
+                      {alertDescription}
+                    </p>
+                  ) : (
+                    <p className="text-xs italic text-ink-muted dark:text-ink-muted-dark mt-1">
+                      No additional description provided.
                     </p>
                   )}
-                  {alert.location_text && (
+                  {alert.location_text ? (
                     <p className="text-xs text-ink-muted dark:text-ink-muted-dark mt-1">
                       📍 {alert.location_text}
                     </p>
-                  )}
+                  ) : null}
 
                   <div className="flex items-center gap-2 mt-3 flex-wrap">
-                    {alert.status === 'PENDING' && (
+                    {alertStatus === 'PENDING' && (
                       <button
                         disabled={isAcking}
                         onClick={() => void handleAcknowledge(alert.id)}
@@ -370,7 +404,7 @@ export const SecurityDashboardPage: React.FC = () => {
                         Acknowledge
                       </button>
                     )}
-                    {(alert.status === 'ACKNOWLEDGED' || alert.status === 'IN_PROGRESS') && (
+                    {(alertStatus === 'ACKNOWLEDGED' || alertStatus === 'IN_PROGRESS') && (
                       <button
                         disabled={isResolving}
                         onClick={() => void handleResolve(alert.id)}
@@ -418,60 +452,80 @@ export const SecurityDashboardPage: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-3">
-            {recent_reports.map((report) => (
-              <div
-                key={report.id}
-                className="rounded-control border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark p-4"
-              >
-                <div className="flex items-start justify-between gap-3 flex-wrap">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-mono text-ink-muted dark:text-ink-muted-dark">
-                      #{report.id}
-                    </span>
-                    {report.category && (
-                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300">
-                        {report.category}
+            {recent_reports.map((report) => {
+              const reportCategory =
+                report.category ||
+                report.incident_type_display ||
+                report.incident_type ||
+                'Issue';
+              const reportStatus = report.status || 'PENDING';
+              const reportStatusDisplay = report.status_display || reportStatus;
+
+              return (
+                <div
+                  key={report.id}
+                  className="rounded-control border border-rule dark:border-rule-dark bg-surface dark:bg-surface-dark p-4"
+                >
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-mono text-ink-muted dark:text-ink-muted-dark">
+                        #{report.id}
                       </span>
-                    )}
-                    <span
-                      className={`text-[11px] font-semibold px-2 py-0.5 rounded ${statusColor(report.status)}`}
-                    >
-                      {report.status_display || report.status}
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300">
+                        {reportCategory}
+                      </span>
+                      <span
+                        className={`text-[11px] font-semibold px-2 py-0.5 rounded ${statusColor(reportStatus)}`}
+                      >
+                        {reportStatusDisplay}
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-ink-muted dark:text-ink-muted-dark">
+                      {fmtDate(report.created_at)}
                     </span>
                   </div>
-                  <span className="text-[11px] text-ink-muted dark:text-ink-muted-dark">
-                    {fmtDate(report.created_at)}
-                  </span>
-                </div>
 
-                <p className="mt-2 text-sm font-semibold text-ink dark:text-ink-dark">
-                  {report.reporter_name || 'Unknown Resident'}
-                </p>
-                {report.description && (
-                  <p className="text-sm text-ink-muted dark:text-ink-muted-dark mt-1 line-clamp-2">
-                    {report.description}
+                  <p className="mt-2 text-sm font-semibold text-ink dark:text-ink-dark">
+                    {report.reporter_name || 'Resident'}
                   </p>
-                )}
-                {report.location && (
-                  <p className="text-xs text-ink-muted dark:text-ink-muted-dark mt-1">
-                    📍 {report.location}
-                  </p>
-                )}
+                  {report.description ? (
+                    <p className="text-sm text-ink-muted dark:text-ink-muted-dark mt-1 line-clamp-2">
+                      {report.description}
+                    </p>
+                  ) : (
+                    <p className="text-xs italic text-ink-muted dark:text-ink-muted-dark mt-1">
+                      No description provided.
+                    </p>
+                  )}
+                  {report.location ? (
+                    <p className="text-xs text-ink-muted dark:text-ink-muted-dark mt-1">
+                      📍 {report.location}
+                    </p>
+                  ) : null}
 
-                <div className="mt-3">
-                  <Link
-                    to="/reports"
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-control border border-rule dark:border-rule-dark text-xs font-semibold text-ink-muted dark:text-ink-muted-dark hover:border-action hover:text-action transition-colors"
-                  >
-                    View Reports
-                  </Link>
+                  <div className="mt-3">
+                    <Link
+                      to="/reports"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-control border border-rule dark:border-rule-dark text-xs font-semibold text-ink-muted dark:text-ink-muted-dark hover:border-action hover:text-action transition-colors"
+                    >
+                      View Reports
+                    </Link>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
     </div>
+  );
+};
+
+export const SecurityDashboardPage: React.FC = () => {
+  return (
+    <ErrorBoundary fallbackMessage="An error occurred while loading the Security Dashboard. Please try again or refresh the page.">
+      <SecurityDashboardView />
+    </ErrorBoundary>
   );
 };
 

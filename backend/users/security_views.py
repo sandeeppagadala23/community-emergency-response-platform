@@ -130,8 +130,18 @@ def security_dashboard(request):
     alerts_data = []
     for alert in recent_alerts:
         my_assignment = alert.assignments.filter(responder=user).first()
+        serialized_alert = SOSAlertSerializer(alert).data
+        # Ensure category / emergency_type and status_display are populated cleanly
+        category = serialized_alert.get('category') or getattr(alert, 'category', '') or 'OTHER'
+        status_code = serialized_alert.get('status') or getattr(alert, 'status', '') or 'PENDING'
+        status_display = getattr(alert, 'get_status_display', lambda: status_code)() or status_code
         alerts_data.append({
-            **SOSAlertSerializer(alert).data,
+            **serialized_alert,
+            'category': category,
+            'emergency_type': category,
+            'status': status_code,
+            'status_display': status_display,
+            'description': serialized_alert.get('message') or getattr(alert, 'message', '') or '',
             'has_location': alert.latitude is not None and alert.longitude is not None,
             'location_text': alert.location_text or '',
             'my_assignment_id': my_assignment.pk if my_assignment else None,
@@ -142,7 +152,19 @@ def security_dashboard(request):
     recent_reports_qs = EmergencyReport.objects.select_related(
         'reporter', 'assigned_volunteer', 'responded_by'
     ).order_by('-created_at')[:15]
-    reports_data = EmergencyReportSerializer(recent_reports_qs, many=True).data
+    reports_data = []
+    for report in recent_reports_qs:
+        serialized_report = EmergencyReportSerializer(report).data
+        incident_type = serialized_report.get('incident_type') or getattr(report, 'incident_type', '') or 'OTHER'
+        status_code = serialized_report.get('status') or getattr(report, 'status', '') or 'PENDING'
+        status_display = serialized_report.get('status_display') or getattr(report, 'get_status_display', lambda: status_code)() or status_code
+        reports_data.append({
+            **serialized_report,
+            'category': serialized_report.get('incident_type_display') or incident_type,
+            'incident_type': incident_type,
+            'status': status_code,
+            'status_display': status_display,
+        })
 
     return Response({
         'metrics': {

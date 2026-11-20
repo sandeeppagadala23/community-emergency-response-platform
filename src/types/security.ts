@@ -27,28 +27,33 @@ export interface SecurityGuard {
 
 export interface SecurityAlert {
   id: number;
-  resident_name: string;
-  emergency_type: string;
-  description: string;
+  resident_name?: string;
+  category?: string;
+  emergency_type?: string;
+  description?: string;
+  message?: string;
   status: string;
-  status_display: string;
+  status_display?: string;
   created_at: string;
-  location_text: string;
-  has_location: boolean;
-  my_assignment_id: number | null;
-  assigned_to_me: boolean;
-  acknowledged_by_name: string | null;
+  location_text?: string;
+  has_location?: boolean;
+  my_assignment_id?: number | null;
+  assigned_to_me?: boolean;
+  acknowledged_by_name?: string | null;
 }
 
 export interface SecurityReport {
   id: number;
-  reporter_name: string;
-  category: string;
-  description: string;
+  title?: string;
+  reporter_name?: string;
+  category?: string;
+  incident_type?: string;
+  incident_type_display?: string;
+  description?: string;
   status: string;
-  status_display: string;
+  status_display?: string;
   created_at: string;
-  location: string | null;
+  location?: string | null;
 }
 
 export interface SecurityDashboardData {
