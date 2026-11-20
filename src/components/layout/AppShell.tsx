@@ -41,6 +41,9 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
     const fetchUnread = async () => {
       if (inFlight) return;
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        return;
+      }
       inFlight = true;
       try {
         const count = await notificationService.getUnreadCount();
@@ -65,14 +68,22 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     const handleNotificationRead = () => {
       void fetchUnread();
     };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void fetchUnread();
+      }
+    };
+
     window.addEventListener('cerp:notification_read', handleNotificationRead);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       isMounted = false;
       clearInterval(interval);
       window.removeEventListener('cerp:notification_read', handleNotificationRead);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [location.pathname, user]);
+  }, [user]);
 
   return (
     <div className="app-shell min-h-screen flex flex-col bg-paper dark:bg-paper-dark text-ink dark:text-ink-dark transition-colors duration-150">

@@ -51,6 +51,8 @@ def reports_visible_to(user):
         'responded_by',
         'assigned_volunteer',
         'society',
+    ).prefetch_related(
+        'reporter__flats__block',
     )
     if can_view_all_reports(user):
         return reports

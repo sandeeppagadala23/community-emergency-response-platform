@@ -15,6 +15,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import IntegrityError, transaction
+from django.db.models import Case, Count, IntegerField, Q, When
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_http_methods
 
@@ -108,13 +109,53 @@ def security_dashboard(request):
     # All SOS alerts visible to security (security can_view_all_sos_alerts)
     all_sos = SOSAlert.objects.select_related('reporter', 'acknowledged_by').prefetch_related('assignments')
 
-    # Metrics
-    total_active = all_sos.filter(status__in=['PENDING', 'ACKNOWLEDGED', 'IN_PROGRESS']).count()
-    new_sos_count = all_sos.filter(status='PENDING').count()
-    acknowledged_count = all_sos.filter(status='ACKNOWLEDGED').count()
-    in_progress_count = all_sos.filter(status='IN_PROGRESS').count()
-    resolved_count = all_sos.filter(status='RESOLVED').count()
-    cancelled_count = all_sos.filter(status='CANCELLED').count()
+    # Optimized Metrics: Single query aggregation for all SOS status metrics
+    sos_metrics = all_sos.aggregate(
+        total_active=Count(
+            Case(
+                When(status__in=['PENDING', 'ACKNOWLEDGED', 'IN_PROGRESS'], then=1),
+                output_field=IntegerField(),
+            )
+        ),
+        new_sos=Count(
+            Case(
+                When(status='PENDING', then=1),
+                output_field=IntegerField(),
+            )
+        ),
+        acknowledged=Count(
+            Case(
+                When(status='ACKNOWLEDGED', then=1),
+                output_field=IntegerField(),
+            )
+        ),
+        in_progress=Count(
+            Case(
+                When(status='IN_PROGRESS', then=1),
+                output_field=IntegerField(),
+            )
+        ),
+        resolved=Count(
+            Case(
+                When(status='RESOLVED', then=1),
+                output_field=IntegerField(),
+            )
+        ),
+        cancelled=Count(
+            Case(
+                When(status='CANCELLED', then=1),
+                output_field=IntegerField(),
+            )
+        ),
+    )
+
+    total_active = sos_metrics['total_active'] or 0
+    new_sos_count = sos_metrics['new_sos'] or 0
+    acknowledged_count = sos_metrics['acknowledged'] or 0
+    in_progress_count = sos_metrics['in_progress'] or 0
+    resolved_count = sos_metrics['resolved'] or 0
+    cancelled_count = sos_metrics['cancelled'] or 0
+
     assigned_to_me_count = all_sos.filter(
         assignments__responder=user,
         status__in=['PENDING', 'ACKNOWLEDGED', 'IN_PROGRESS']

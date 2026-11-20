@@ -50,7 +50,7 @@ def can_view_all_sos_alerts(user):
 
 
 def visible_sos_alerts(user):
-    alerts = SOSAlert.objects.select_related("reporter")
+    alerts = SOSAlert.objects.select_related("reporter").prefetch_related("reporter__flats__block")
     if can_view_all_sos_alerts(user):
         return alerts
     profile = get_user_profile(user)

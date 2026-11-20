@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { incidentService } from '../services/incidentService';
@@ -29,8 +29,16 @@ export const IncidentListPage: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [guardianTab, setGuardianTab] = useState<'alerts' | 'reports'>('alerts');
+  const incidentsInFlightRef = useRef(false);
+  const reportsInFlightRef = useRef(false);
 
   const fetchIncidents = async (silent = false, initialLoad = false) => {
+    if (incidentsInFlightRef.current) return;
+    if (silent && typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+      return;
+    }
+
+    incidentsInFlightRef.current = true;
     if (!silent && !initialLoad) setIsLoading(true);
     if (silent) setIsRefreshing(true);
 
@@ -42,51 +50,86 @@ export const IncidentListPage: React.FC = () => {
     } catch (error: unknown) {
       setLoadError(apiClient.normalizeError(error).message);
     } finally {
+      incidentsInFlightRef.current = false;
       setIsLoading(false);
       setIsRefreshing(false);
     }
   };
 
-  const fetchGuardianData = async () => {
+  const fetchGuardianData = async (silent = false) => {
     if (role !== 'GUARDIAN') return;
-    setIsLoadingReports(true);
-    setReportsError(null);
+    if (reportsInFlightRef.current) return;
+    if (silent && typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+      return;
+    }
+
+    reportsInFlightRef.current = true;
+    if (!silent) {
+      setIsLoadingReports(true);
+      setReportsError(null);
+    }
+
     try {
-      const [reportsData, contactsData] = await Promise.all([
-        reportService.getReports().catch((err: unknown) => {
-          setReportsError(apiClient.normalizeError(err).message);
-          return [] as EmergencyReport[];
-        }),
-        contactService.getContacts().catch(() => [] as GuardianContact[]),
-      ]);
-      setReports(reportsData);
-      setGuardianContacts(contactsData);
+      if (silent) {
+        // In silent polling mode, fetch live reports; contacts do not change frequently
+        const reportsData = await reportService.getReports().catch(() => null);
+        if (reportsData) {
+          setReports(reportsData);
+        }
+      } else {
+        const [reportsData, contactsData] = await Promise.all([
+          reportService.getReports().catch((err: unknown) => {
+            setReportsError(apiClient.normalizeError(err).message);
+            return [] as EmergencyReport[];
+          }),
+          contactService.getContacts().catch(() => [] as GuardianContact[]),
+        ]);
+        setReports(reportsData);
+        setGuardianContacts(contactsData);
+      }
     } catch (error: unknown) {
-      setReportsError(apiClient.normalizeError(error).message);
+      if (!silent) {
+        setReportsError(apiClient.normalizeError(error).message);
+      }
     } finally {
-      setIsLoadingReports(false);
+      reportsInFlightRef.current = false;
+      if (!silent) {
+        setIsLoadingReports(false);
+      }
     }
   };
 
   useEffect(() => {
+    let isMounted = true;
     void fetchIncidents(false, true);
     if (role === 'GUARDIAN') {
-      void fetchGuardianData();
+      void fetchGuardianData(false);
     }
 
     const interval = setInterval(() => {
+      if (!isMounted) return;
       void fetchIncidents(true);
       if (role === 'GUARDIAN') {
-        reportService.getReports()
-          .then(setReports)
-          .catch(() => {});
-        contactService.getContacts()
-          .then(setGuardianContacts)
-          .catch(() => {});
+        void fetchGuardianData(true);
       }
     }, 10000);
 
-    return () => clearInterval(interval);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isMounted) {
+        void fetchIncidents(true);
+        if (role === 'GUARDIAN') {
+          void fetchGuardianData(true);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [user, role]);
 
   const isDeskRole = role === 'SECURITY' || role === 'ADMIN';
